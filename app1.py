@@ -96,6 +96,8 @@ def get_hardware_lot():
     iddq_0 = np.random.normal(12.8, 0.25, 50)
     leak_0 = np.random.normal(1.80, 0.04, 50)
     tpd_0 = np.random.normal(3.20, 0.03, 50)
+    supply_0 = np.random.normal(45.0, 0.8, 50)
+    vth_0 = np.random.normal(0.72, 0.015, 50)
     
     iddq_24 = iddq_0 + np.random.normal(0.10, 0.02, 50)
     iddq_96 = iddq_24 + np.random.normal(0.15, 0.02, 50)
@@ -109,11 +111,21 @@ def get_hardware_lot():
     tpd_96 = tpd_24 + np.random.normal(0.008, 0.002, 50)
     tpd_168 = tpd_96 + np.random.normal(0.012, 0.003, 50)
     
+    supply_24 = supply_0 + np.random.normal(0.3, 0.05, 50)
+    supply_96 = supply_24 + np.random.normal(0.4, 0.05, 50)
+    supply_168 = supply_96 + np.random.normal(0.5, 0.08, 50)
+    
+    vth_24 = vth_0 - np.random.normal(0.002, 0.001, 50)
+    vth_96 = vth_24 - np.random.normal(0.004, 0.001, 50)
+    vth_168 = vth_96 - np.random.normal(0.006, 0.001, 50)
+    
     df = pd.DataFrame({
         "Device_ID": device_ids,
         "Iddq_0h": iddq_0, "Iddq_24h": iddq_24, "Iddq_96h": iddq_96, "Iddq_168h": iddq_168,
         "Leakage_0h": leak_0, "Leakage_24h": leak_24, "Leakage_96h": leak_96, "Leakage_168h": leak_168,
-        "Tpd_0h": tpd_0, "Tpd_24h": tpd_24, "Tpd_96h": tpd_96, "Tpd_168h": tpd_168
+        "Tpd_0h": tpd_0, "Tpd_24h": tpd_24, "Tpd_96h": tpd_96, "Tpd_168h": tpd_168,
+        "Supply_0h": supply_0, "Supply_24h": supply_24, "Supply_96h": supply_96, "Supply_168h": supply_168,
+        "Vth_0h": vth_0, "Vth_24h": vth_24, "Vth_96h": vth_96, "Vth_168h": vth_168
     })
     
     # Critical Reject Outliers (Red: 5 Units = 10%)
@@ -125,6 +137,10 @@ def get_hardware_lot():
         df.loc[i, "Leakage_168h"] = df.loc[i, "Leakage_0h"] * 2.60
         df.loc[i, "Tpd_96h"] = df.loc[i, "Tpd_0h"] * 1.25
         df.loc[i, "Tpd_168h"] = df.loc[i, "Tpd_0h"] * 1.45
+        df.loc[i, "Supply_96h"] = df.loc[i, "Supply_0h"] * 1.40
+        df.loc[i, "Supply_168h"] = df.loc[i, "Supply_0h"] * 1.90
+        df.loc[i, "Vth_96h"] = df.loc[i, "Vth_0h"] * 0.70
+        df.loc[i, "Vth_168h"] = df.loc[i, "Vth_0h"] * 0.50
         
     # Extended Retest Outliers (Yellow: 8 Units = 16%)
     warn_indices = [3, 10, 14, 18, 26, 34, 37, 42]
@@ -135,6 +151,10 @@ def get_hardware_lot():
         df.loc[i, "Leakage_168h"] = df.loc[i, "Leakage_0h"] * 1.42
         df.loc[i, "Tpd_96h"] = df.loc[i, "Tpd_0h"] * 1.10
         df.loc[i, "Tpd_168h"] = df.loc[i, "Tpd_0h"] * 1.18
+        df.loc[i, "Supply_96h"] = df.loc[i, "Supply_0h"] * 1.15
+        df.loc[i, "Supply_168h"] = df.loc[i, "Supply_0h"] * 1.25
+        df.loc[i, "Vth_96h"] = df.loc[i, "Vth_0h"] * 0.88
+        df.loc[i, "Vth_168h"] = df.loc[i, "Vth_0h"] * 0.80
 
     # Pending Screening Units (White: 6 Units = 12%)
     pend_indices = [39, 43, 45, 46, 47, 49]
@@ -145,6 +165,10 @@ def get_hardware_lot():
         df.loc[i, "Leakage_168h"] = np.nan
         df.loc[i, "Tpd_96h"] = np.nan
         df.loc[i, "Tpd_168h"] = np.nan
+        df.loc[i, "Supply_96h"] = np.nan
+        df.loc[i, "Supply_168h"] = np.nan
+        df.loc[i, "Vth_96h"] = np.nan
+        df.loc[i, "Vth_168h"] = np.nan
 
     statuses = []
     for i in range(50):
@@ -179,14 +203,14 @@ evaluated_count = len(df) - pend_count
 pda_rate = (reject_count / evaluated_count) * 100 if evaluated_count > 0 else 0.0
 
 # -----------------------------------------------------------------------------
-# LEFT SIDEBAR: HISTORICAL LOT SUMMARY ONLY
+# LEFT SIDEBAR: HISTORICAL LOT SUMMARY (CLEAN SLOT NAMES)
 # -----------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### Historical Lot Summary")
     st.caption("MIL-STD-883 Production Slot Breakdown")
     
     hist_sidebar = pd.DataFrame({
-        "Slot Ref": ["Slot 1 (0h)", "Slot 2 (24h)", "Slot 3 (96h)", "Slot 4 (168h)", "Slot 5 (Live)"],
+        "Slot Ref": ["Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5 (Live)"],
         "Pass %": ["100%", "100%", "92.5%", "85.0%", f"{(pass_count/evaluated_count)*100:.1f}%"],
         "Retest %": ["0.0%", "0.0%", "7.5%", "5.0%", f"{(retest_count/evaluated_count)*100:.1f}%"],
         "Reject %": ["0.0%", "0.0%", "0.0%", "10.0%", f"{pda_rate:.1f}%"]
@@ -315,13 +339,19 @@ with top_donut_col:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# LEVEL 2: LIVE LOT CONTROL TRAJECTORIES (FULL WIDTH CONTROL CHART)
+# LEVEL 2: LIVE LOT CONTROL TRAJECTORIES (ALL EXPANDED PARAMETERS)
 # -----------------------------------------------------------------------------
 st.markdown("### Live Lot Analytics: Parametric Trajectories (Control Chart)")
 
 param_selection = st.selectbox(
     "Select Telemetry Metric for Multi-Device Control Chart:",
-    ["Iddq (Quiescent Current - µA)", "Leakage (Sub-threshold - nA)", "Propagation Delay (Tpd - ns)"]
+    [
+        "Iddq (Quiescent Current - µA)",
+        "Leakage Current (Ileak - nA)",
+        "Supply Current (Idd - mA)",
+        "Threshold Voltage (Vth - V)",
+        "Propagation Delay (Tpd - ns)"
+    ]
 )
 
 if "Iddq" in param_selection:
@@ -332,6 +362,14 @@ elif "Leakage" in param_selection:
     cols = ["Leakage_0h", "Leakage_24h", "Leakage_96h", "Leakage_168h"]
     y_label = "Leakage Current (nA)"
     ucl = 4.0
+elif "Supply" in param_selection:
+    cols = ["Supply_0h", "Supply_24h", "Supply_96h", "Supply_168h"]
+    y_label = "Supply Current (mA)"
+    ucl = 65.0
+elif "Threshold" in param_selection:
+    cols = ["Vth_0h", "Vth_24h", "Vth_96h", "Vth_168h"]
+    y_label = "Threshold Voltage (V)"
+    ucl = 0.50
 else:
     cols = ["Tpd_0h", "Tpd_24h", "Tpd_96h", "Tpd_168h"]
     y_label = "Propagation Delay (ns)"
@@ -460,7 +498,7 @@ for idx, row in df.iterrows():
         f"• Quiescent Current (Iddq): {iddq_str}<br>"
         f"• Time-Drift Rate: <b>{drift_str}</b><br>"
         f"• Gate Oxide Leakage: {leak_str}<br>"
-        f"• Propagation Delay: {tpd_str}"
+        f"• Propagation Delay (Tpd): {tpd_str}"
     )
 
 fig_grid = go.Figure(data=go.Heatmap(
