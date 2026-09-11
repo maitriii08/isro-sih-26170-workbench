@@ -1,641 +1,1521 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import io
+import streamlit.components.v1 as components
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="ISRO Reliability Workbench | PS-26170",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
-# --- CLEAN DARK AEROSPACE STYLING ---
+# Hide Streamlit Default Chrome
 st.markdown("""
 <style>
-    /* Dark Theme Core */
-    .stApp {
-        background-color: #0b0f19 !important;
-        color: #94a3b8 !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    .block-container {
-        padding-top: 1.8rem !important;
-        padding-bottom: 2.5rem !important;
-        max-width: 1440px !important;
-    }
-
-    /* Top Console Banner */
-    .banner-box {
-        background: #111827;
-        border: 1px solid #1f2937;
-        border-radius: 8px;
-        padding: 16px 22px;
-        margin-bottom: 18px;
-    }
-
-    /* Timeline Stepper */
-    .timeline-box {
-        background: #111827;
-        border: 1px solid #1f2937;
-        border-radius: 6px;
-        padding: 12px 18px;
-        margin-top: 14px;
-        margin-bottom: 22px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-family: monospace;
-        font-size: 0.8rem;
-    }
-    .badge-done { background: #064e3b; color: #10b981; padding: 5px 10px; border-radius: 4px; font-weight: 600; }
-    .badge-live { background: #1e3a5f; color: #38bdf8; border: 1px solid #38bdf8; padding: 5px 10px; border-radius: 4px; font-weight: 600; }
-    .badge-pend { background: #1f2937; color: #64748b; padding: 5px 10px; border-radius: 4px; }
-
-    /* Custom 14px High-Glow Progress Bars */
-    .custom-progress-track {
-        background-color: #1f2937;
-        border-radius: 6px;
-        height: 14px;
-        width: 100%;
-        overflow: hidden;
-        margin-top: 6px;
-        margin-bottom: 14px;
-    }
-    .custom-progress-fill-blue {
-        background: linear-gradient(90deg, #0284c7, #38bdf8);
-        height: 100%;
-        border-radius: 6px;
-        box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
-    }
-
-    .tag-pass { color: #10b981; font-weight: bold; }
-    .tag-warn { color: #eab308; font-weight: bold; }
-    .tag-fail { color: #ef4444; font-weight: bold; }
-    .tag-pend { color: #f8fafc; font-weight: bold; }
+    #MainMenu, header, footer {visibility: hidden !important; height: 0 !important;}
+    .block-container {padding: 0 !important; max-width: 100% !important;}
+    iframe {border-radius: 0 !important; width: 100% !important; min-height: 100vh !important;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE INITIALIZATION ---
-if "decision_logs" not in st.session_state:
-    st.session_state.decision_logs = [
-        {"Timestamp": "2026-09-07 02:48:32", "Event": "ATE Data Stream Ingested (LOT-2026-A17)"},
-        {"Timestamp": "2026-09-07 02:50:11", "Event": "Auto-Screening executed via Modified Z-score and Time-Drift regression."}
-    ]
+html_code = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISRO Reliability Workbench</title>
+    <!-- Professional Enterprise Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-if "saved_decisions" not in st.session_state:
-    st.session_state.saved_decisions = {}
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-# --- HARDWARE TELEMETRY DATA ENGINE (50-SOCKET DATASET) ---
-@st.cache_data
-def get_hardware_lot():
-    np.random.seed(42)
-    device_ids = [f"CMP-{1001 + i}" for i in range(50)]
-    
-    iddq_0 = np.random.normal(12.8, 0.25, 50)
-    leak_0 = np.random.normal(1.80, 0.04, 50)
-    tpd_0 = np.random.normal(3.20, 0.03, 50)
-    supply_0 = np.random.normal(45.0, 0.8, 50)
-    vth_0 = np.random.normal(0.72, 0.015, 50)
-    
-    iddq_24 = iddq_0 + np.random.normal(0.10, 0.02, 50)
-    iddq_96 = iddq_24 + np.random.normal(0.15, 0.02, 50)
-    iddq_168 = iddq_96 + np.random.normal(0.20, 0.03, 50)
-    
-    leak_24 = leak_0 + np.random.normal(0.02, 0.01, 50)
-    leak_96 = leak_24 + np.random.normal(0.03, 0.01, 50)
-    leak_168 = leak_96 + np.random.normal(0.04, 0.01, 50)
-    
-    tpd_24 = tpd_0 + np.random.normal(0.005, 0.002, 50)
-    tpd_96 = tpd_24 + np.random.normal(0.008, 0.002, 50)
-    tpd_168 = tpd_96 + np.random.normal(0.012, 0.003, 50)
-    
-    supply_24 = supply_0 + np.random.normal(0.3, 0.05, 50)
-    supply_96 = supply_24 + np.random.normal(0.4, 0.05, 50)
-    supply_168 = supply_96 + np.random.normal(0.5, 0.08, 50)
-    
-    vth_24 = vth_0 - np.random.normal(0.002, 0.001, 50)
-    vth_96 = vth_24 - np.random.normal(0.004, 0.001, 50)
-    vth_168 = vth_96 - np.random.normal(0.006, 0.001, 50)
-    
-    df = pd.DataFrame({
-        "Device_ID": device_ids,
-        "Iddq_0h": iddq_0, "Iddq_24h": iddq_24, "Iddq_96h": iddq_96, "Iddq_168h": iddq_168,
-        "Leakage_0h": leak_0, "Leakage_24h": leak_24, "Leakage_96h": leak_96, "Leakage_168h": leak_168,
-        "Tpd_0h": tpd_0, "Tpd_24h": tpd_24, "Tpd_96h": tpd_96, "Tpd_168h": tpd_168,
-        "Supply_0h": supply_0, "Supply_24h": supply_24, "Supply_96h": supply_96, "Supply_168h": supply_168,
-        "Vth_0h": vth_0, "Vth_24h": vth_24, "Vth_96h": vth_96, "Vth_168h": vth_168
-    })
-    
-    # Critical Reject Outliers (Red: 5 Units = 10%)
-    crit_indices = [7, 22, 30, 44, 48]
-    for i in crit_indices:
-        df.loc[i, "Iddq_96h"] = df.loc[i, "Iddq_0h"] * 1.55
-        df.loc[i, "Iddq_168h"] = df.loc[i, "Iddq_0h"] * 2.30
-        df.loc[i, "Leakage_96h"] = df.loc[i, "Leakage_0h"] * 1.65
-        df.loc[i, "Leakage_168h"] = df.loc[i, "Leakage_0h"] * 2.60
-        df.loc[i, "Tpd_96h"] = df.loc[i, "Tpd_0h"] * 1.25
-        df.loc[i, "Tpd_168h"] = df.loc[i, "Tpd_0h"] * 1.45
-        df.loc[i, "Supply_96h"] = df.loc[i, "Supply_0h"] * 1.40
-        df.loc[i, "Supply_168h"] = df.loc[i, "Supply_0h"] * 1.90
-        df.loc[i, "Vth_96h"] = df.loc[i, "Vth_0h"] * 0.70
-        df.loc[i, "Vth_168h"] = df.loc[i, "Vth_0h"] * 0.50
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            color: #94a3b8;
+            min-height: 100vh;
+            /* Authentic Deep Space Starfield & Cosmos Background */
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.20) 0%, transparent 45%),
+                radial-gradient(circle at 80% 80%, rgba(0, 245, 155, 0.14) 0%, transparent 40%),
+                linear-gradient(rgba(8, 14, 28, 0.55), rgba(4, 8, 18, 0.70)),
+                url('https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=2070&auto=format&fit=crop') no-repeat center center fixed;
+            background-size: cover;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        /* Frosted Glass Acrylic Core Tokens */
+        .glass-card {
+            background: rgba(13, 22, 40, 0.68);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            border-top: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 18px;
+            box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.75);
+        }
+
+        /* App Main Shell Container */
+        .app-shell {
+            display: flex;
+            width: 100%;
+            max-width: 1560px;
+            margin: 0 auto;
+            gap: 24px;
+            align-items: flex-start;
+        }
+
+        /* Collapsible Sidebar Drawer */
+        .sidebar-panel {
+            width: 310px;
+            min-width: 310px;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .sidebar-panel.collapsed {
+            width: 0;
+            min-width: 0;
+            margin-right: -24px;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .main-dashboard {
+            flex: 1;
+            min-width: 0;
+            width: 100%;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Sidebar Toggle Buttons */
+        .sidebar-close-btn {
+            position: absolute;
+            top: 20px;
+            right: 16px;
+            width: 30px;
+            height: 30px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #38bdf8;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-close-btn:hover {
+            background: #0284c7;
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+        .reopen-sidebar-btn {
+            display: none;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            color: #38bdf8;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .reopen-sidebar-btn:hover {
+            background: #0284c7;
+            color: #fff;
+        }
+
+        /* Top Navbar */
+        .top-navbar-single {
+            padding: 16px 24px;
+            margin-bottom: 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: nowrap;
+            overflow: hidden;
+        }
+
+        .header-left-cluster {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .header-meta-chip {
+            font-size: 0.78rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: #94a3b8;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 5px 12px;
+            border-radius: 8px;
+            white-space: nowrap;
+        }
+
+        .header-right-cluster {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .pill-badge-blue {
+            background: rgba(56, 189, 248, 0.16);
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            padding: 5px 14px;
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+        }
+
+        .pill-badge-green {
+            background: rgba(0, 245, 155, 0.16);
+            color: #00F59B;
+            border: 1px solid rgba(0, 245, 155, 0.4);
+            padding: 5px 14px;
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .pill-badge-yellow {
+            background: rgba(255, 184, 0, 0.18);
+            color: #FFB800;
+            border: 1px solid rgba(255, 184, 0, 0.45);
+            padding: 5px 14px;
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+        }
+
+        .pill-badge-white {
+            background: rgba(255, 255, 255, 0.14);
+            color: #FFFFFF;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 5px 14px;
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+        }
+
+        .pill-badge-red {
+            background: rgba(255, 42, 95, 0.18);
+            color: #FF2A5F;
+            border: 1px solid rgba(255, 42, 95, 0.45);
+            padding: 5px 14px;
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            background: #00F59B;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00F59B;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.9); opacity: 0.7; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.7; }
+        }
+
+        /* Checkpoint Milestone Pipeline */
+        .milestone-stepper {
+            padding: 14px 20px;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .milestone-step {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.8rem;
+            font-family: 'JetBrains Mono', monospace;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .milestone-step:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.6), 0 0 15px rgba(56, 189, 248, 0.25);
+            z-index: 50;
+        }
+
+        .milestone-step.done {
+            border-color: rgba(0, 245, 155, 0.35);
+            color: #00F59B;
+        }
+
+        .milestone-step.active {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+            color: #38bdf8;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+            font-weight: 700;
+        }
+
+        .milestone-step.pending {
+            color: #64748b;
+        }
+
+        .milestone-arrow {
+            color: #475569;
+            font-size: 0.8rem;
+        }
+
+        /* Progress Rails */
+        .progress-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 22px;
+        }
+
+        .progress-box { padding: 16px 22px; }
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 8px;
+        }
+        .progress-track {
+            background: rgba(30, 41, 59, 0.75);
+            border-radius: 9999px;
+            height: 9px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0284c7, #38bdf8);
+            border-radius: 9999px;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.6);
+        }
+
+        /* Hero 4-Metrics + Enlarged Donut Grid Layout */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr) 2.4fr;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card { 
+            padding: 14px 16px; 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            min-height: 115px;
+        }
+
+        .metric-card:hover {
+            border-color: rgba(56, 189, 248, 0.45);
+            transform: translateY(-3px);
+            box-shadow: 0 20px 48px -8px rgba(0, 0, 0, 0.85), 0 0 20px rgba(56, 189, 248, 0.15);
+        }
         
-    # Extended Retest Outliers (Yellow: 8 Units = 16%)
-    warn_indices = [3, 10, 14, 18, 26, 34, 37, 42]
-    for i in warn_indices:
-        df.loc[i, "Iddq_96h"] = df.loc[i, "Iddq_0h"] * 1.25
-        df.loc[i, "Iddq_168h"] = df.loc[i, "Iddq_0h"] * 1.40
-        df.loc[i, "Leakage_96h"] = df.loc[i, "Leakage_0h"] * 1.25
-        df.loc[i, "Leakage_168h"] = df.loc[i, "Leakage_0h"] * 1.42
-        df.loc[i, "Tpd_96h"] = df.loc[i, "Tpd_0h"] * 1.10
-        df.loc[i, "Tpd_168h"] = df.loc[i, "Tpd_0h"] * 1.18
-        df.loc[i, "Supply_96h"] = df.loc[i, "Supply_0h"] * 1.15
-        df.loc[i, "Supply_168h"] = df.loc[i, "Supply_0h"] * 1.25
-        df.loc[i, "Vth_96h"] = df.loc[i, "Vth_0h"] * 0.88
-        df.loc[i, "Vth_168h"] = df.loc[i, "Vth_0h"] * 0.80
+        .metric-title {
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+        .metric-number {
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #f8fafc;
+            letter-spacing: -0.5px;
+            margin-bottom: 2px;
+        }
+        .metric-delta {
+            font-size: 0.70rem;
+            font-family: 'JetBrains Mono', monospace;
+            color: #00F59B;
+        }
 
-    # Pending Screening Units (White: 6 Units = 12%)
-    pend_indices = [39, 43, 45, 46, 47, 49]
-    for i in pend_indices:
-        df.loc[i, "Iddq_96h"] = np.nan
-        df.loc[i, "Iddq_168h"] = np.nan
-        df.loc[i, "Leakage_96h"] = np.nan
-        df.loc[i, "Leakage_168h"] = np.nan
-        df.loc[i, "Tpd_96h"] = np.nan
-        df.loc[i, "Tpd_168h"] = np.nan
-        df.loc[i, "Supply_96h"] = np.nan
-        df.loc[i, "Supply_168h"] = np.nan
-        df.loc[i, "Vth_96h"] = np.nan
-        df.loc[i, "Vth_168h"] = np.nan
+        /* Enlarged Pie Chart Card with Single-Line Legend */
+        .donut-highlight-card {
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
 
-    statuses = []
-    for i in range(50):
-        if i in pend_indices:
-            statuses.append("YET TO BE TESTED")
-        elif i in crit_indices:
-            statuses.append("REJECT")
-        elif i in warn_indices:
-            statuses.append("EXTENDED TESTING")
-        else:
-            statuses.append("PASS")
-    df["AI_Status"] = statuses
+        .panel-container {
+            padding: 24px 26px;
+            margin-bottom: 24px;
+        }
 
-    return df
+        .section-header {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #f8fafc;
+            letter-spacing: -0.3px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-df = get_hardware_lot()
+        /* 50-Socket Matrix Grid with Pop-up */
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 10px;
+            margin-top: 14px;
+        }
 
-# Telemetry Calculations
-df["Drift_Total"] = df["Iddq_96h"] - df["Iddq_0h"]
-df["Drift_Pct"] = ((df["Iddq_96h"] - df["Iddq_0h"]) / df["Iddq_0h"]) * 100
+        .socket-chip {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 11px 4px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
 
-valid_drifts = df["Drift_Total"].dropna()
-med = np.median(valid_drifts)
-mad = np.median(np.abs(valid_drifts - med))
-df["Modified_Z"] = 0.6745 * (df["Drift_Total"] - med) / (mad + 1e-6)
+        .socket-chip:hover {
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 10px 28px rgba(0,0,0,0.7), 0 0 14px rgba(56, 189, 248, 0.35);
+            border-color: rgba(255,255,255,0.45);
+            z-index: 50;
+        }
 
-reject_count = (df["AI_Status"] == "REJECT").sum()
-retest_count = (df["AI_Status"] == "EXTENDED TESTING").sum()
-pass_count = (df["AI_Status"] == "PASS").sum()
-pend_count = (df["AI_Status"] == "YET TO BE TESTED").sum()
-evaluated_count = len(df) - pend_count
-pda_rate = (reject_count / evaluated_count) * 100 if evaluated_count > 0 else 0.0
+        .socket-id {
+            font-size: 0.76rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: #f8fafc;
+            margin-bottom: 4px;
+        }
 
-# -----------------------------------------------------------------------------
-# LEFT SIDEBAR: HISTORICAL LOT SUMMARY (CLEAN SLOT NAMES)
-# -----------------------------------------------------------------------------
-with st.sidebar:
-    st.markdown("### Historical Lot Summary")
-    st.caption("MIL-STD-883 Production Slot Breakdown")
-    
-    hist_sidebar = pd.DataFrame({
-        "Slot Ref": ["Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5 (Live)"],
-        "Pass %": ["100%", "100%", "92.5%", "85.0%", f"{(pass_count/evaluated_count)*100:.1f}%"],
-        "Retest %": ["0.0%", "0.0%", "7.5%", "5.0%", f"{(retest_count/evaluated_count)*100:.1f}%"],
-        "Reject %": ["0.0%", "0.0%", "0.0%", "10.0%", f"{pda_rate:.1f}%"]
-    })
-    st.dataframe(hist_sidebar, use_container_width=True, hide_index=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### Lot Compliance Audit")
-    compliance_table = pd.DataFrame({
-        "Batch Stage": ["Slot 1 to 3", "Slot 4", "Slot 5 (Live)"],
-        "Audit Status": ["PASSED", "PDA RISK", "PDA RISK BREACH"]
-    })
-    st.dataframe(compliance_table, use_container_width=True, hide_index=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### Data Provenance")
-    st.markdown("""
-    <div style="font-family: monospace; font-size: 0.75rem; color: #64748b; line-height: 1.6;">
-        Source: ATE_STREAM_A17.csv<br>
-        Checksum: SHA256-59159cf734b6...<br>
-        Monitored: 50 Sockets (BIB-50-A)<br>
-        Chamber: THERMAL-CHAMBER-B04<br>
-        Standard: MIL-STD-883 Class-S
-    </div>
-    """, unsafe_allow_html=True)
+        .socket-pill {
+            font-size: 0.68rem;
+            font-weight: 700;
+            border-radius: 9999px;
+            padding: 2px 7px;
+            display: inline-block;
+        }
 
-# -----------------------------------------------------------------------------
-# MAIN HEADER BANNER & DUAL PROGRESS BARS
-# -----------------------------------------------------------------------------
-st.markdown(f"""
-<div class="banner-box">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <span style="font-family: monospace; font-size: 0.85rem; background: #1e293b; color: #38bdf8; padding: 4px 8px; border-radius: 4px; font-weight: bold;">PS 26170</span>
-            <span style="font-size: 1.25rem; font-weight: bold; color: #f8fafc; margin-left: 10px;">Burn-In & Screening Dashboard</span>
-            <span style="font-size: 0.82rem; color: #64748b; margin-left: 12px;">Offline Parametric Reliability Analysis</span>
+        .chip-pass { border-top: 2px solid #00F59B; }
+        .chip-pass .socket-pill { background: rgba(0, 245, 155, 0.18); color: #00F59B; }
+
+        .chip-warn { border-top: 2px solid #FFB800; }
+        .chip-warn .socket-pill { background: rgba(255, 184, 0, 0.18); color: #FFB800; }
+
+        .chip-fail { border-top: 2px solid #FF2A5F; }
+        .chip-fail .socket-pill { background: rgba(255, 42, 95, 0.20); color: #FF2A5F; }
+
+        .chip-pend { border-top: 2px solid #94a3b8; }
+        .chip-pend .socket-pill { background: rgba(148, 163, 184, 0.22); color: #FFFFFF; }
+
+        /* Single-Line Guaranteed Tooltip Component */
+        .tooltip-card {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: 115%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            width: 260px;
+            background: rgba(15, 23, 42, 0.96);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 16px 36px rgba(0,0,0,0.85);
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 100;
+            text-align: left;
+            font-size: 0.76rem;
+            line-height: 1.6;
+            white-space: nowrap;
+        }
+
+        .socket-chip:hover .tooltip-card,
+        .milestone-step:hover .tooltip-card,
+        .metric-card:hover .tooltip-card {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Filter Pills & Select Controls */
+        .filter-btn-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .filter-btn {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+            color: #f8fafc;
+            border-color: rgba(56, 189, 248, 0.4);
+        }
+
+        .filter-btn.active {
+            background: rgba(56, 189, 248, 0.16);
+            color: #38bdf8;
+            border-color: #38bdf8;
+        }
+
+        select, textarea {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #f8fafc;
+            padding: 12px 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            outline: none;
+        }
+        select:focus, textarea:focus {
+            border-color: #38bdf8;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 11px 14px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        .radio-option:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+            background: rgba(56, 189, 248, 0.08);
+        }
+        .radio-option.selected {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.12);
+            color: #f8fafc;
+        }
+
+        .btn-action {
+            width: 100%;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 12px;
+            padding: 14px 20px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 6px 18px rgba(2, 132, 199, 0.35);
+            transition: all 0.2s ease;
+            margin-top: 14px;
+        }
+        .btn-action:hover {
+            background: linear-gradient(135deg, #0369a1 100%, #0284c7 100%);
+            box-shadow: 0 8px 24px rgba(56, 189, 248, 0.55);
+            transform: translateY(-1px);
+        }
+
+        /* CSV Bottom Export Bar */
+        .bottom-export-bar {
+            margin-top: 10px;
+            padding: 18px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-download-csv {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: #38bdf8;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-size: 0.86rem;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-download-csv:hover {
+            background: #0284c7;
+            color: #ffffff;
+            box-shadow: 0 4px 18px rgba(2, 132, 199, 0.45);
+            transform: translateY(-1px);
+        }
+
+        /* Confirmation Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(4, 7, 15, 0.75);
+            backdrop-filter: blur(16px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-box {
+            width: 480px;
+            background: rgba(17, 24, 39, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-top: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-overlay.active .modal-box { transform: scale(1); }
+
+        .modal-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(0, 245, 155, 0.15);
+            border: 1px solid rgba(0, 245, 155, 0.35);
+            color: #00F59B;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin: 0 auto 16px;
+        }
+
+        /* Sidebar Table */
+        .sidebar-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+            margin-top: 10px;
+            margin-bottom: 16px;
+        }
+        .sidebar-table th {
+            text-align: left;
+            padding: 8px 8px;
+            color: #94a3b8;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-weight: 600;
+        }
+        .sidebar-table td {
+            padding: 8px 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main Flex Shell Container -->
+    <div class="app-shell">
+        
+        <!-- COLLAPSIBLE SIDEBAR DRAWER -->
+        <div class="sidebar-panel" id="sidebarPanel">
+            <div class="glass-card panel-container" style="padding: 22px; position: relative;">
+                
+                <div class="sidebar-close-btn" onclick="toggleSidebar()" title="Collapse Panel">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </div>
+
+                <div style="font-size: 1.1rem; font-weight: 800; color: #f8fafc; margin-bottom: 2px;">Historical Lot Summary</div>
+                <div style="font-size: 0.76rem; color: #64748b; margin-bottom: 12px;">MIL-STD-883 Production Slot Breakdown</div>
+                
+                <table class="sidebar-table">
+                    <thead>
+                        <tr><th>Slot Ref</th><th>Passed %</th><th>Retest %</th><th>Rejected %</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Slot 1</td><td>100%</td><td>0.0%</td><td>0.0%</td></tr>
+                        <tr><td>Slot 2</td><td>100%</td><td>0.0%</td><td>0.0%</td></tr>
+                        <tr><td>Slot 3</td><td>92.5%</td><td>7.5%</td><td>0.0%</td></tr>
+                        <tr><td>Slot 4</td><td>85.0%</td><td>5.0%</td><td>10.0%</td></tr>
+                        <tr><td>Slot 5 (Live)</td><td style="color:#00F59B; font-weight:700;">70.5%</td><td style="color:#FFB800; font-weight:700;">18.2%</td><td style="color:#FF2A5F; font-weight:700;">11.4%</td></tr>
+                    </tbody>
+                </table>
+
+                <div style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; margin-top: 16px; margin-bottom: 6px;">Lot Compliance Audit</div>
+                <table class="sidebar-table">
+                    <thead>
+                        <tr><th>Batch Stage</th><th>Audit Status</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Slot 1 to 3</td><td><span class="pill-badge-green" style="padding:3px 10px; font-size:0.7rem;">PASSED</span></td></tr>
+                        <tr><td>Slot 4</td><td><span class="pill-badge-blue" style="padding:3px 10px; font-size:0.7rem;">PDA RISK</span></td></tr>
+                        <tr><td>Slot 5 (Live)</td><td><span class="pill-badge-red" style="padding:3px 10px; font-size:0.7rem;">PDA RISK BREACH</span></td></tr>
+                    </tbody>
+                </table>
+
+                <div style="font-size: 0.95rem; font-weight: 700; color: #f8fafc; margin-top: 16px; margin-bottom: 8px;">Data Provenance</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #64748b; line-height: 1.6; background: rgba(15, 23, 42, 0.7); padding: 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                    Source: ATE_STREAM_A17.csv<br>
+                    Checksum: SHA256-59159cf7...<br>
+                    Monitored: 50 Sockets (BIB-50-A)<br>
+                    Chamber: THERMAL-B04 (125°C)<br>
+                    Standard: MIL-STD-883 Class-S
+                </div>
+            </div>
         </div>
-        <div>
-            <span style="background: #1e293b; color: #10b981; font-family: monospace; font-size: 0.78rem; padding: 5px 12px; border-radius: 4px; font-weight: bold;">● OFFLINE MODE</span>
+
+        <!-- MAIN EXPANDING DASHBOARD CONTENT -->
+        <div class="main-dashboard" id="mainDashboard">
+            
+            <!-- Top Navbar with Space in "> Lot Summary" -->
+            <div class="glass-card top-navbar-single">
+                <div class="header-left-cluster">
+                    <button class="reopen-sidebar-btn" id="reopenSidebarBtn" onclick="toggleSidebar()">
+                        <i class="fa-solid fa-chevron-right"></i> Lot Summary
+                    </button>
+                    <span class="pill-badge-blue">PS 26170</span>
+                    <span style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.3px;">
+                        Burn-In & Screening Dashboard
+                    </span>
+                    <div class="header-meta-chip">
+                        Lot: <strong style="color: #f8fafc;">LOT-2026-A17</strong>
+                    </div>
+                </div>
+                <div class="header-right-cluster">
+                    <div class="pill-badge-green"><div class="pulse-dot"></div> OFFLINE MODE</div>
+                    <div class="pill-badge-red">5 DEVICE(S) AT REJECT RISK (PDA: 11.4%)</div>
+                </div>
+            </div>
+
+            <!-- Dual Progress Bars -->
+            <div class="progress-grid">
+                <div class="glass-card progress-box">
+                    <div class="progress-header">
+                        <span>Burn-In Stress Progression (125°C Chamber)</span>
+                        <span style="color: #38bdf8; font-family: 'JetBrains Mono', monospace;">57% (96h / 168h Reached)</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: 57%;"></div>
+                    </div>
+                </div>
+                <div class="glass-card progress-box">
+                    <div class="progress-header">
+                        <span>Electrical Screening Verification</span>
+                        <span style="color: #38bdf8; font-family: 'JetBrains Mono', monospace;">88% (44 of 50 Sockets Ingested)</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: 88%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checkpoint Milestone Pipeline with Pop-ups -->
+            <div class="glass-card milestone-stepper">
+                <div class="milestone-step done">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <div>
+                        <div style="font-size: 0.72rem; color: #94a3b8;">STAGE 01</div>
+                        <div>0h Pre-Stress Baseline</div>
+                    </div>
+                    <div class="tooltip-card">
+                        <strong style="color:#00F59B;">STAGE 01 (0h Pre-Stress)</strong><br>
+                        • Baseline Telemetry Captured<br>
+                        • 50 DUT Sockets Ingested<br>
+                        • Gate Check: PASSED (100%)
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right milestone-arrow"></i>
+                <div class="milestone-step done">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <div>
+                        <div style="font-size: 0.72rem; color: #94a3b8;">STAGE 02</div>
+                        <div>24h Dynamic Intermediate</div>
+                    </div>
+                    <div class="tooltip-card">
+                        <strong style="color:#00F59B;">STAGE 02 (24h Intermediate)</strong><br>
+                        • Slope Delta Analysis Completed<br>
+                        • Process Variance Normalized<br>
+                        • Gate Check: PASSED (100%)
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right milestone-arrow"></i>
+                <div class="milestone-step active">
+                    <i class="fa-solid fa-satellite-dish fa-spin" style="--fa-animation-duration: 4s;"></i>
+                    <div>
+                        <div style="font-size: 0.72rem; color: #38bdf8;">STAGE 03 [LIVE]</div>
+                        <div>96h Active Diagnostic Scan</div>
+                    </div>
+                    <div class="tooltip-card">
+                        <strong style="color:#38bdf8;">STAGE 03 (96h Active Scan)</strong><br>
+                        • SLOT-5 Live Ingest Active<br>
+                        • 5 Latent Breakdown Risks Found<br>
+                        • PDA Threshold: 11.4% (Critical)
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right milestone-arrow"></i>
+                <div class="milestone-step pending">
+                    <i class="fa-regular fa-circle"></i>
+                    <div>
+                        <div style="font-size: 0.72rem; color: #64748b;">STAGE 04</div>
+                        <div>168h Lot Qualification</div>
+                    </div>
+                    <div class="tooltip-card">
+                        <strong style="color:#94a3b8;">STAGE 04 (168h Final Qual)</strong><br>
+                        • Scheduled Qualification State<br>
+                        • Thermal Soak Completion<br>
+                        • Status: IN-QUEUE
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero 4-Metrics + Enlarged Donut Grid (Single-Line Legend) -->
+            <div class="metrics-grid">
+                <div class="glass-card metric-card">
+                    <div class="metric-title">Quiescent Current (I<sub>ddq</sub>)</div>
+                    <div class="metric-number">14.30 <span style="font-size: 0.95rem; color: #94a3b8;">µA</span></div>
+                    <div class="metric-delta" style="color: #00F59B;">↑ Baseline: 12.80 µA</div>
+                    <div class="tooltip-card">
+                        <strong style="color:#00F59B;">Quiescent Current (I<sub>ddq</sub>)</strong><br>
+                        • Population Mean: 14.30 µA<br>
+                        • Static Limit: 22.00 µA<br>
+                        • Health Status: PASSED
+                    </div>
+                </div>
+
+                <div class="glass-card metric-card">
+                    <div class="metric-title">Gate Oxide Leakage (I<sub>leak</sub>)</div>
+                    <div class="metric-number">2.05 <span style="font-size: 0.95rem; color: #94a3b8;">nA</span></div>
+                    <div class="metric-delta" style="color: #00F59B;">↑ +0.04 nA Normal Drift</div>
+                    <div class="tooltip-card">
+                        <strong style="color:#00F59B;">Gate Oxide Leakage (I<sub>leak</sub>)</strong><br>
+                        • Mean Leakage: 2.05 nA<br>
+                        • Limit Ceiling: 4.00 nA<br>
+                        • Barrier Integrity: PASSED
+                    </div>
+                </div>
+
+                <div class="glass-card metric-card">
+                    <div class="metric-title">Propagation Delay (T<sub>pd</sub>)</div>
+                    <div class="metric-number">3.36 <span style="font-size: 0.95rem; color: #94a3b8;">ns</span></div>
+                    <div class="metric-delta" style="color: #00F59B;">↑ Within 3.5 ns Spec</div>
+                    <div class="tooltip-card">
+                        <strong style="color:#00F59B;">Propagation Delay (T<sub>pd</sub>)</strong><br>
+                        • Nominal Mean: 3.36 ns<br>
+                        • Maximum Ceiling: 4.80 ns<br>
+                        • Timing Margin: PASSED
+                    </div>
+                </div>
+
+                <div class="glass-card metric-card">
+                    <div class="metric-title">Kelvin Contact Resistance</div>
+                    <div class="metric-number">0.042 <span style="font-size: 0.95rem; color: #94a3b8;">Ω</span></div>
+                    <div class="metric-delta" style="color: #00F59B;">↑ 4-Point Nominal</div>
+                    <div class="tooltip-card">
+                        <strong style="color:#00F59B;">Kelvin Resistance</strong><br>
+                        • 4-Point Terminal Check: PASSED<br>
+                        • Contact Variance: ±0.002 Ω<br>
+                        • Socket Connection: OPTIMAL
+                    </div>
+                </div>
+
+                <!-- Enlarged Pie Chart Card with Single-Line Legend -->
+                <div class="glass-card donut-highlight-card">
+                    <div style="height: 125px; width: 125px; position: relative; flex-shrink: 0;">
+                        <canvas id="yieldDonut"></canvas>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 0.82rem; font-weight: 800; color: #f8fafc; margin-bottom: 4px;">Lot Yield (PDA: 11.4%)</div>
+                        <div style="font-size: 0.68rem; color: #00F59B; font-weight: 700; margin-bottom: 2px; white-space: nowrap;">● 62% Flight Ready (PASSED)</div>
+                        <div style="font-size: 0.68rem; color: #FFB800; font-weight: 700; margin-bottom: 2px; white-space: nowrap;">● 16% Retest Required (RETEST)</div>
+                        <div style="font-size: 0.68rem; color: #FF2A5F; font-weight: 700; margin-bottom: 2px; white-space: nowrap;">● 10% Critical (REJECTED)</div>
+                        <div style="font-size: 0.68rem; color: #FFFFFF; font-weight: 700; white-space: nowrap;">● 12% In-Queue (IN-QUEUE)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bézier Spline Multi-Trace Control Chart with Single-Line Tooltips -->
+            <div class="glass-card panel-container">
+                <div class="section-header">
+                    <div>
+                        <span>Live Lot Analytics: Parametric Trajectories (Control Chart)</span>
+                        <div style="font-size: 0.78rem; font-weight: 500; color: #64748b; margin-top: 4px;">All 50 Components Screened Against Dynamic Drift & Spec Limits</div>
+                    </div>
+                    <div style="width: 320px;">
+                        <select id="paramSelect" onchange="switchParamData(this.value)">
+                            <option value="Tpd">Propagation Delay (T<sub>pd</sub> - ns)</option>
+                            <option value="Iddq">Quiescent Current (I<sub>ddq</sub> - µA)</option>
+                            <option value="Leakage">Gate Oxide Leakage (I<sub>leak</sub> - nA)</option>
+                            <option value="Supply">Supply Current (I<sub>dd</sub> - mA)</option>
+                            <option value="Vth">Threshold Voltage (V<sub>th</sub> - V)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="height: 350px; width: 100%;">
+                    <canvas id="controlChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 50-Socket Batch Anomaly Map with Pop-up Glow -->
+            <div class="glass-card panel-container">
+                <div class="section-header">
+                    <div>
+                        <span>Batch Anomaly Map (50 Sockets Burn-In Board Matrix)</span>
+                    </div>
+                </div>
+                <div class="matrix-grid" id="matrixGrid"></div>
+            </div>
+
+            <!-- Forensic Diagnostics & Formal ISRO QA Disposition Modal -->
+            <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 24px; margin-bottom: 24px;">
+                
+                <!-- Left Forensic Card -->
+                <div class="glass-card panel-container">
+                    <div class="section-header" style="flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span>Forensic Diagnostics:</span>
+                            <select id="dutDropdown" onchange="selectDUT(this.value)" style="width: 200px; padding: 7px 12px; font-size: 0.82rem;">
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="filter-btn-group">
+                                <button class="filter-btn active" onclick="filterDropdown('ALL', this)">ALL</button>
+                                <button class="filter-btn" onclick="filterDropdown('PASSED', this)">PASSED</button>
+                                <button class="filter-btn" onclick="filterDropdown('RETEST', this)">RETEST</button>
+                                <button class="filter-btn" onclick="filterDropdown('REJECTED', this)">REJECTED</button>
+                                <button class="filter-btn" onclick="filterDropdown('IN-QUEUE', this)">IN-QUEUE</button>
+                            </div>
+                            <!-- Oval Badge: Correct Yellow for RETEST and White for IN-QUEUE -->
+                            <span id="selectedStatusTag" class="pill-badge-yellow">RETEST</span>
+                        </div>
+                    </div>
+
+                    <!-- Component Name & Status Title -->
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <span id="forensicCmpTitle">CMP-1004</span>
+                        <span style="color: #64748b; font-weight: 400;">|</span>
+                        <span>STATUS:</span>
+                        <span id="forensicStatusTitle" style="color: #FFB800;">RETEST</span>
+                    </div>
+
+                    <!-- Dynamic Status-Matched Verdict Card -->
+                    <div id="verdictBox" style="border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div id="verdictTitle" style="font-weight: 700; font-size: 0.88rem; margin-bottom: 4px;"></div>
+                        <div id="verdictDesc" style="font-size: 0.8rem; line-height: 1.5;"></div>
+                    </div>
+
+                    <!-- 4 Diagnostic Metrics -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 14px;">
+                            <div style="font-size: 0.75rem; color: #94a3b8;">Quiescent Current (I<sub>ddq</sub>)</div>
+                            <div style="font-size: 1.45rem; font-weight: 800; color: #f8fafc;" id="fIddq">16.48 µA</div>
+                            <div style="font-size: 0.72rem; font-family: 'JetBrains Mono';" id="fIddqBase">↑ Baseline: 12.80 µA</div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 14px;">
+                            <div style="font-size: 0.75rem; color: #94a3b8;">Gate Oxide Leakage (I<sub>leak</sub>)</div>
+                            <div style="font-size: 1.45rem; font-weight: 800; color: #f8fafc;" id="fLeak">2.28 nA</div>
+                            <div style="font-size: 0.72rem; font-family: 'JetBrains Mono';" id="fLeakBase">↑ Nominal Barrier</div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 14px;">
+                            <div style="font-size: 0.75rem; color: #94a3b8;">Temporal Drift Rate</div>
+                            <div style="font-size: 1.45rem; font-weight: 800; color: #f8fafc;" id="fDrift">+25.0%</div>
+                            <div style="font-size: 0.72rem; font-family: 'JetBrains Mono';" id="fZScore">↑ Z-Score: +54.21σ</div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 14px;">
+                            <div style="font-size: 0.75rem; color: #94a3b8;">Propagation Delay (T<sub>pd</sub>)</div>
+                            <div style="font-size: 1.45rem; font-weight: 800; color: #f8fafc;" id="fTpd">3.49 ns</div>
+                            <div style="font-size: 0.72rem; font-family: 'JetBrains Mono';" id="fTpdBase">↑ Spec < 3.5 ns</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right QA Decision Box -->
+                <div class="glass-card panel-container">
+                    <div class="section-header">
+                        <span>Flight Quality Assurance & Lot Disposition Sign-Off</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 8px;">Select QA Disposition Vector:</label>
+                        <div class="radio-option selected" onclick="setRadio(this, 'Class-S Flight Qualified (PASSED)')">
+                            <i class="fa-solid fa-circle-dot" style="color: #38bdf8;"></i> Class-S Flight Qualified (PASSED)
+                        </div>
+                        <div class="radio-option" onclick="setRadio(this, 'Override: Lot Acceptance (PASSED)')">
+                            <i class="fa-regular fa-circle"></i> Override: Lot Acceptance (PASSED)
+                        </div>
+                        <div class="radio-option" onclick="setRadio(this, 'Override: Thermal Retest (+24h Stress: RETEST)')">
+                            <i class="fa-regular fa-circle"></i> Override: Thermal Retest (+24h Stress: RETEST)
+                        </div>
+                        <div class="radio-option" onclick="setRadio(this, 'Override: Lot Quarantine (REJECTED)')">
+                            <i class="fa-regular fa-circle"></i> Override: Lot Quarantine (REJECTED)
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 6px;">Mission Assurance & Engineering Justification Audit Record:</label>
+                        <textarea id="qaComment" rows="4" style="min-height: 125px; resize: vertical;" placeholder="Enter formal engineering disposition rationale for qualification audit compliance..."></textarea>
+                    </div>
+
+                    <button class="btn-action" onclick="openCommitModal()">
+                        <i class="fa-solid fa-satellite"></i> Authorize & Sign Off Lot Disposition (MIL-STD-883 Class-S)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom CSV Download Panel -->
+            <div class="glass-card bottom-export-bar">
+                <div>
+                    <strong style="color:#f8fafc; font-size:0.92rem;">Audit Report & Lot Telemetry Export</strong>
+                    <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">Download certified screening record containing all 50 socket measurements and signed dispositions.</div>
+                </div>
+                <button class="btn-download-csv" onclick="downloadTelemetryCSV()">
+                    <i class="fa-solid fa-file-csv"></i> Export Signed Screening Report (CSV)
+                </button>
+            </div>
+
         </div>
     </div>
-    <div style="margin-top: 14px; display: flex; justify-content: space-between; font-size: 0.82rem; font-family: monospace;">
-        <span style="color: #94a3b8;">Active Lot: <strong>LOT-2026-A17</strong> &nbsp;|&nbsp; Monitored Stage: <strong style="color: #38bdf8;">SLOT-5 (96h Active Diagnostic Scan)</strong> &nbsp;|&nbsp; Last Ingest: 2026-09-07 02:48:32</span>
-        <span>LOT STATUS: <strong class="{'tag-fail' if reject_count > 0 else 'tag-pass'}">{reject_count} DEVICE(S) AT REJECT RISK (PDA: {pda_rate:.1f}%)</strong></span>
+
+    <!-- FLOATING CONFIRMATION POPUP MODAL -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-box">
+            <div class="modal-icon">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <h3 style="font-size: 1.35rem; font-weight: 800; color: #f8fafc; margin-bottom: 8px;">Disposition Authorized!</h3>
+            <p style="font-size: 0.84rem; color: #94a3b8; line-height: 1.6; margin-bottom: 20px;">
+                The QA disposition record has been verified and committed to the flight audit log.
+            </p>
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px; text-align: left; margin-bottom: 20px; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;">
+                <div>RECORD ID: <span style="color:#38bdf8;" id="modalDut">CMP-1004</span></div>
+                <div>DISPOSITION: <span style="color:#00F59B;" id="modalAction">Class-S Flight Qualified (PASSED)</span></div>
+                <div>TIMESTAMP: <span style="color:#cbd5e1;">2026-09-07 02:54:12</span></div>
+            </div>
+            <button class="btn-action" style="margin-top:0;" onclick="closeModal()">Close & Return</button>
+        </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
 
-burnin_pct = int((96 / 168) * 100)
-screening_pct = int((evaluated_count / len(df)) * 100)
-
-p_col1, p_col2 = st.columns(2)
-with p_col1:
-    st.markdown(f'''
-    <div style="font-size: 0.84rem; font-weight: 600; color: #cbd5e1; display: flex; justify-content: space-between;">
-        <span>Burn-In Stress Progression (125°C Chamber)</span>
-        <span style="color: #38bdf8; font-family: monospace;">{burnin_pct}% (96h / 168h Reached)</span>
-    </div>
-    <div class="custom-progress-track">
-        <div class="custom-progress-fill-blue" style="width: {burnin_pct}%;"></div>
-    </div>
-    ''', unsafe_allow_html=True)
-
-with p_col2:
-    st.markdown(f'''
-    <div style="font-size: 0.84rem; font-weight: 600; color: #cbd5e1; display: flex; justify-content: space-between;">
-        <span>Electrical Screening Verification</span>
-        <span style="color: #38bdf8; font-family: monospace;">{screening_pct}% ({evaluated_count} of {len(df)} Sockets Ingested)</span>
-    </div>
-    <div class="custom-progress-track">
-        <div class="custom-progress-fill-blue" style="width: {screening_pct}%;"></div>
-    </div>
-    ''', unsafe_allow_html=True)
-
-st.markdown("""
-<div class="timeline-box">
-    <div class="badge-done">0h: Baseline Initialization [PASS]</div>
-    <div style="color: #64748b;">➔</div>
-    <div class="badge-done">24h: Intermediate Slope Checkpoint [PASS]</div>
-    <div style="color: #64748b;">➔</div>
-    <div class="badge-live">96h: Active Dynamic Scan [SLOT 5 LIVE]</div>
-    <div style="color: #64748b;">➔</div>
-    <div class="badge-pend">168h: Qualification Final State [PENDING]</div>
-</div>
-""", unsafe_allow_html=True)
-
-# -----------------------------------------------------------------------------
-# LEVEL 1: ELECTRICAL SCREENING & LOT YIELD OVERVIEW (SPACIOUS 70/30)
-# -----------------------------------------------------------------------------
-st.markdown("### Electrical Screening & Lot Yield Overview")
-
-top_tiles_col, top_donut_col = st.columns([7, 3])
-
-with top_tiles_col:
-    valid_df = df[df["AI_Status"] != "YET TO BE TESTED"]
-    st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-    m1, m2 = st.columns(2)
-    m1.metric("Quiescent Current (Iddq)", f"{valid_df['Iddq_96h'].mean():.2f} µA", "Baseline: 12.80 µA")
-    m2.metric("Gate Oxide Leakage (Ileak)", f"{valid_df['Leakage_96h'].mean():.2f} nA", "+0.04 nA Normal Drift")
-    
-    st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
-    m3, m4 = st.columns(2)
-    m3.metric("Propagation Delay (Tpd)", f"{valid_df['Tpd_96h'].mean():.2f} ns", "Within 3.5 ns Spec")
-    m4.metric("Kelvin Contact Resistance", "0.042 Ω", "4-Point Terminal Nominal")
-
-with top_donut_col:
-    fig_pie = go.Figure(data=[go.Pie(
-        labels=['Pass (Flight Ready)', 'Extended Retest', 'Critical Reject', 'Yet to be Tested'],
-        values=[pass_count, retest_count, reject_count, pend_count],
-        hole=0.55,
-        marker=dict(colors=['#10b981', '#eab308', '#ef4444', '#f8fafc']),
-        textinfo='percent+label',
-        showlegend=False
-    )])
-    fig_pie.update_layout(
-        title=f"Lot Yield Distribution (PDA: {pda_rate:.1f}%)",
-        title_font_size=13,
-        template="plotly_dark",
-        paper_bgcolor="#111827",
-        plot_bgcolor="#0b0f19",
-        height=230,
-        margin=dict(l=10, r=10, t=35, b=10)
-    )
-    st.plotly_chart(fig_pie, use_container_width=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# -----------------------------------------------------------------------------
-# LEVEL 2: LIVE LOT CONTROL TRAJECTORIES (ALL EXPANDED PARAMETERS)
-# -----------------------------------------------------------------------------
-st.markdown("### Live Lot Analytics: Parametric Trajectories (Control Chart)")
-
-param_selection = st.selectbox(
-    "Select Telemetry Metric for Multi-Device Control Chart:",
-    [
-        "Iddq (Quiescent Current - µA)",
-        "Leakage Current (Ileak - nA)",
-        "Supply Current (Idd - mA)",
-        "Threshold Voltage (Vth - V)",
-        "Propagation Delay (Tpd - ns)"
-    ]
-)
-
-if "Iddq" in param_selection:
-    cols = ["Iddq_0h", "Iddq_24h", "Iddq_96h", "Iddq_168h"]
-    y_label = "Iddq Current (µA)"
-    ucl = 22.0
-elif "Leakage" in param_selection:
-    cols = ["Leakage_0h", "Leakage_24h", "Leakage_96h", "Leakage_168h"]
-    y_label = "Leakage Current (nA)"
-    ucl = 4.0
-elif "Supply" in param_selection:
-    cols = ["Supply_0h", "Supply_24h", "Supply_96h", "Supply_168h"]
-    y_label = "Supply Current (mA)"
-    ucl = 65.0
-elif "Threshold" in param_selection:
-    cols = ["Vth_0h", "Vth_24h", "Vth_96h", "Vth_168h"]
-    y_label = "Threshold Voltage (V)"
-    ucl = 0.50
-else:
-    cols = ["Tpd_0h", "Tpd_24h", "Tpd_96h", "Tpd_168h"]
-    y_label = "Propagation Delay (ns)"
-    ucl = 4.8
-
-fig_control = go.Figure()
-x_checkpoints = ["0h", "24h", "96h", "168h"]
-
-# Shaded Vertical Stage Dividers
-fig_control.add_vrect(x0="0h", x1="24h", fillcolor="#161e2e", opacity=0.35, layer="below", line_width=0)
-fig_control.add_vrect(x0="96h", x1="168h", fillcolor="#161e2e", opacity=0.35, layer="below", line_width=0)
-
-# 1. Nominal Pass Traces (Green)
-for idx, row in df[df["AI_Status"] == "PASS"].iterrows():
-    fig_control.add_trace(go.Scatter(
-        x=x_checkpoints,
-        y=[row[cols[0]], row[cols[1]], row[cols[2]], row[cols[3]]],
-        mode='lines',
-        line=dict(color='rgba(16, 185, 129, 0.35)', width=1.1),
-        showlegend=False,
-        hoverinfo='text',
-        text=f"{row['Device_ID']}: Nominal Pass (Green)"
-    ))
-
-# 2. Extended Retest Traces (Yellow)
-for idx, row in df[df["AI_Status"] == "EXTENDED TESTING"].iterrows():
-    fig_control.add_trace(go.Scatter(
-        x=x_checkpoints,
-        y=[row[cols[0]], row[cols[1]], row[cols[2]], row[cols[3]]],
-        mode='lines+markers',
-        line=dict(color='#eab308', width=2.0),
-        marker=dict(size=5),
-        showlegend=False,
-        hoverinfo='text',
-        text=f"{row['Device_ID']}: Extended Retest Required (Yellow)"
-    ))
-
-# 3. Critical Latent Reject Traces (Red)
-for idx, row in df[df["AI_Status"] == "REJECT"].iterrows():
-    fig_control.add_trace(go.Scatter(
-        x=x_checkpoints,
-        y=[row[cols[0]], row[cols[1]], row[cols[2]], row[cols[3]]],
-        mode='lines+markers',
-        line=dict(color='#ef4444', width=3.0),
-        marker=dict(size=6),
-        showlegend=False,
-        hoverinfo='text',
-        text=f"{row['Device_ID']}: Critical Latent Defect (Red)"
-    ))
-
-# 4. Yet To Be Tested Traces (White / Gray Dash)
-for idx, row in df[df["AI_Status"] == "YET TO BE TESTED"].iterrows():
-    fig_control.add_trace(go.Scatter(
-        x=["0h", "24h"],
-        y=[row[cols[0]], row[cols[1]]],
-        mode='lines+markers',
-        line=dict(color='#f8fafc', width=1.2, dash='dot'),
-        marker=dict(size=4),
-        showlegend=False,
-        hoverinfo='text',
-        text=f"{row['Device_ID']}: In-Queue / Yet To Be Tested (White)"
-    ))
-
-# Upper Spec Limit Line
-fig_control.add_trace(go.Scatter(
-    x=x_checkpoints, y=[ucl]*4, mode='lines',
-    line=dict(color='#dc2626', width=1.5, dash='dash'),
-    showlegend=False,
-    hoverinfo='text',
-    text=f"Static Spec Ceiling Limit: {ucl}"
-))
-
-fig_control.update_layout(
-    title=f"Multi-Trace Trajectories (Green: Pass | Yellow: Retest | Red: Reject | White: In-Queue)",
-    title_font_size=12,
-    template="plotly_dark",
-    paper_bgcolor="#111827",
-    plot_bgcolor="#0b0f19",
-    height=340,
-    showlegend=False,
-    margin=dict(l=30, r=20, t=40, b=30),
-    xaxis_title="Burn-In Stress Duration Checkpoints",
-    yaxis_title=y_label
-)
-st.plotly_chart(fig_control, use_container_width=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# -----------------------------------------------------------------------------
-# LEVEL 3: 50-SOCKET BATCH ANOMALY MAP (FULL HOVER TELEMETRY WITH DRIFT %)
-# -----------------------------------------------------------------------------
-st.markdown("### Batch Anomaly Map (50 Sockets Burn-In Board Matrix)")
-
-status_map = {"PASS": 0, "EXTENDED TESTING": 1, "REJECT": 2, "YET TO BE TESTED": 3}
-grid_z = np.zeros((5, 10))
-text_labels = [["" for _ in range(10)] for _ in range(5)]
-hover_texts = [["" for _ in range(10)] for _ in range(5)]
-
-for idx, row in df.iterrows():
-    r = idx // 10
-    c = idx % 10
-    status = row["AI_Status"]
-    grid_z[r, c] = status_map[status]
-    
-    # Status Tagging for Grid Display
-    if status == "REJECT":
-        drift_label = f"<span style='color: #ef4444; font-weight: bold;'>REJECT (+{row['Drift_Pct']:.0f}%)</span>"
-    elif status == "EXTENDED TESTING":
-        drift_label = f"<span style='color: #eab308; font-weight: bold;'>RETEST (+{row['Drift_Pct']:.0f}%)</span>"
-    elif status == "PASS":
-        drift_label = f"<span style='color: #10b981;'>PASS (+{row['Drift_Pct']:.0f}%)</span>"
-    else:
-        drift_label = "<span style='color: #94a3b8;'>IN-QUEUE</span>"
-        
-    text_labels[r][c] = f"<b>{row['Device_ID']}</b><br><span style='font-size: 9px;'>{drift_label}</span>"
-    
-    # Complete Hover Information with Explicit Time-Drift Rate %
-    iddq_str = f"{row['Iddq_96h']:.2f} µA" if pd.notna(row['Iddq_96h']) else "Awaiting Scan"
-    drift_str = f"+{row['Drift_Pct']:.1f}% (Nominal)" if status == "PASS" else (f"+{row['Drift_Pct']:.1f}% (Significant)" if pd.notna(row['Drift_Pct']) else "Pending Scan")
-    leak_str = f"{row['Leakage_96h']:.2f} nA" if pd.notna(row['Leakage_96h']) else "Awaiting Scan"
-    tpd_str = f"{row['Tpd_96h']:.2f} ns" if pd.notna(row['Tpd_96h']) else "Awaiting Scan"
-    
-    hover_texts[r][c] = (
-        f"<b>{row['Device_ID']} (Socket {r+1}-{c+1})</b><br>"
-        f"Status: <b>{status}</b><br>"
-        f"• Quiescent Current (Iddq): {iddq_str}<br>"
-        f"• Time-Drift Rate: <b>{drift_str}</b><br>"
-        f"• Gate Oxide Leakage: {leak_str}<br>"
-        f"• Propagation Delay (Tpd): {tpd_str}"
-    )
-
-fig_grid = go.Figure(data=go.Heatmap(
-    z=grid_z,
-    text=text_labels,
-    texttemplate="%{text}",
-    textfont={"size": 10, "family": "monospace", "color": "#f8fafc"},
-    hoverinfo="text",
-    hovertext=hover_texts,
-    colorscale=[
-        [0.00, "#0f2e28"], [0.25, "#0f2e28"], # Muted Dark Emerald
-        [0.25, "#3d2d0c"], [0.50, "#3d2d0c"], # Muted Dark Amber
-        [0.50, "#451212"], [0.75, "#451212"], # Muted Dark Crimson
-        [0.75, "#1e293b"], [1.00, "#1e293b"]  # Muted Dark Slate/Gray
-    ],
-    showscale=False,
-    xgap=6,
-    ygap=6
-))
-
-fig_grid.update_layout(
-    template="plotly_dark",
-    paper_bgcolor="#111827",
-    plot_bgcolor="#0b0f19",
-    height=280,
-    margin=dict(l=10, r=10, t=10, b=10),
-    xaxis=dict(showticklabels=False, showgrid=False, zeroline=False),
-    yaxis=dict(showticklabels=False, showgrid=False, zeroline=False, autorange="reversed")
-)
-st.plotly_chart(fig_grid, use_container_width=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-st.divider()
-
-# -----------------------------------------------------------------------------
-# LEVEL 4: ENLARGED FORENSIC DIAGNOSTICS & QA OPERATOR DISPOSITION (50/50)
-# -----------------------------------------------------------------------------
-st.markdown("### QA Justification & Forensic Device Review (All 50 Components)")
-
-device_options = [f"{row['Device_ID']} — [{row['AI_Status']}]" for _, row in df.iterrows()]
-selected_option = st.selectbox("Select Component Socket for Review & Electronic Sign-Off:", device_options, index=1)
-
-selected_dut_id = selected_option.split(" — ")[0]
-target = df[df["Device_ID"] == selected_dut_id].iloc[0]
-
-q1, q2 = st.columns([1, 1], gap="medium")
-
-with q1:
-    with st.container(border=True):
-        status_tag = target['AI_Status']
-        if status_tag == "REJECT":
-            st.markdown(f"### `{target['Device_ID']}` &nbsp;|&nbsp; STATUS: :red[**{status_tag}**]")
-            st.error("**CORE VERDICT: CRITICAL ANOMALY (Latent Oxide Breakdown)**\n\nFixed 22.0 µA ceiling falsely passes this part, but dynamic time-drift detects impending thermal runaway.")
-        elif status_tag == "EXTENDED TESTING":
-            st.markdown(f"### `{target['Device_ID']}` &nbsp;|&nbsp; STATUS: :orange[**{status_tag}**]")
-            st.warning("**CORE VERDICT: MARGINAL DRIFT (+24h Thermal Retest Required)**\n\nDrift slope exceeds nominal process variance. Extended thermal stress required to verify stability.")
-        elif status_tag == "PASS":
-            st.markdown(f"### `{target['Device_ID']}` &nbsp;|&nbsp; STATUS: :green[**{status_tag}**]")
-            st.success("**CORE VERDICT: NOMINAL STABILIZATION (Flight Qualified)**\n\nTelemetry parameters remain tightly clustered within historical 1-sigma distribution.")
-        else:
-            st.markdown(f"### `{target['Device_ID']}` &nbsp;|&nbsp; STATUS: :gray[**{status_tag}**]")
-            st.info("**CORE VERDICT: IN-QUEUE (Awaiting Next ATE Diagnostic Scan)**\n\nComponent pre-conditioned in chamber; awaiting scan data.")
-
-        st.markdown("##### Forensic Parametric Diagnostics")
-        d_col1, d_col2 = st.columns(2)
-        with d_col1:
-            iddq_val = f"{target['Iddq_96h']:.2f} µA" if pd.notna(target['Iddq_96h']) else "Pending"
-            drift_val = f"+{target['Drift_Pct']:.1f}%" if pd.notna(target['Drift_Pct']) else "Pending"
-            st.metric("Quiescent Current (Iddq)", iddq_val, f"Baseline: {target['Iddq_0h']:.2f} µA")
-            st.metric("Temporal Drift Rate", drift_val, f"Z-Score: {target['Modified_Z']:.2f}σ" if pd.notna(target['Modified_Z']) else "N/A")
-        with d_col2:
-            leak_val = f"{target['Leakage_96h']:.2f} nA" if pd.notna(target['Leakage_96h']) else "Pending"
-            tpd_val = f"{target['Tpd_96h']:.2f} ns" if pd.notna(target['Tpd_96h']) else "Pending"
-            st.metric("Gate Oxide Leakage (Ileak)", leak_val, "Nominal Barrier")
-            st.metric("Propagation Delay (Tpd)", tpd_val, "Spec: < 3.5 ns")
-
-with q2:
-    with st.container(border=True):
-        st.markdown("### QA Operator Decision & Electronic Sign-Off")
-        
-        current_saved = st.session_state.saved_decisions.get(target["Device_ID"], {})
-        default_idx = 0
-        if current_saved.get("Decision") == "Override: Pass": default_idx = 1
-        elif current_saved.get("Decision") == "Override: Extended screening": default_idx = 2
-        elif current_saved.get("Decision") == "Override: Reject": default_idx = 3
-
-        decision_option = st.radio(
-            "Select Disposition Action:",
-            ["Accept AI recommendation", "Override: Pass (Flight Ready)", "Override: Extended screening (+24h Retest)", "Override: Reject (Quarantine for DPA)"],
-            index=default_idx
-        )
-        
-        user_comment = st.text_area(
-            "Engineering Rationale & Justification Log:", 
-            value=current_saved.get("Comment", ""), 
-            placeholder="Enter QA inspector rationale for audit record (e.g., Verified gate-oxide stability)...",
-            height=100
-        )
-        
-        if st.button("Commit QA Disposition & Sign Off", use_container_width=True, type="primary"):
-            st.session_state.saved_decisions[target["Device_ID"]] = {
-                "Decision": decision_option,
-                "Comment": user_comment if user_comment else "Standard AI recommendation accepted.",
-                "Timestamp": pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')
+    <!-- JAVASCRIPT LOGIC ENGINE -->
+    <script>
+        // Collapsible Sidebar Drawer
+        function toggleSidebar() {
+            const panel = document.getElementById('sidebarPanel');
+            const reopenBtn = document.getElementById('reopenSidebarBtn');
+            panel.classList.toggle('collapsed');
+            if (panel.classList.contains('collapsed')) {
+                reopenBtn.style.display = 'inline-flex';
+            } else {
+                reopenBtn.style.display = 'none';
             }
-            st.session_state.decision_logs.append({
-                "Timestamp": pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
-                "Event": f"QA Decision committed for {target['Device_ID']}: {decision_option}"
-            })
-            st.success(f"Disposition recorded for {target['Device_ID']}.")
+        }
 
-st.markdown("<br>", unsafe_allow_html=True)
+        // 1. Cyber OLED Donut Chart
+        const ctxDonut = document.getElementById('yieldDonut').getContext('2d');
+        new Chart(ctxDonut, {
+            type: 'doughnut',
+            data: {
+                labels: ['PASSED', 'RETEST', 'REJECTED', 'IN-QUEUE'],
+                datasets: [{
+                    data: [31, 8, 5, 6],
+                    backgroundColor: ['#00F59B', '#FFB800', '#FF2A5F', '#FFFFFF'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                cutout: '66%',
+                responsive: true,
+                maintainAspectRatio: false,
+                devicePixelRatio: 2,
+                plugins: { legend: { display: false } }
+            }
+        });
 
-# -----------------------------------------------------------------------------
-# AUDIT TRAIL & EXPORT SIGNED-OFF CSV REPORT
-# -----------------------------------------------------------------------------
-audit_col1, audit_col2 = st.columns([7, 3])
+        // 2. High-DPI Crisp Multi-Trace Bézier Spline Chart with Single-Line Tooltip
+        const checkpoints = ['0h Baseline', '24h Checkpoint', '96h Active Scan', '168h Qualification'];
+        const critList = [7, 22, 30, 44, 48];
+        const warnList = [3, 10, 14, 18, 26, 34, 37, 42];
+        const pendList = [39, 43, 45, 46, 47, 49];
 
-with audit_col1:
-    with st.expander("Session Audit Log (Air-Gapped Flight Recorder)", expanded=True):
-        log_text = "\n".join([f"[{item['Timestamp']}] {item['Event']}" for item in st.session_state.decision_logs[-5:]])
-        st.code(log_text, language="text")
+        const paramConfigs = {
+            Tpd: { 
+                ucl: 4.8, 
+                yTitle: 'Propagation Delay (Tpd - ns)', 
+                specLabel: 'Static Spec Ceiling Limit (4.8 ns)',
+                yMin: 2.8, yMax: 5.4,
+                baseMean: 3.20,
+                unit: 'ns',
+                generate: (b0, type) => {
+                    if (type === 'crit') return [b0, b0 + 0.05, 4.75 + (b0 - 3.20)*0.5, 4.40 + (b0 - 3.20)*0.3];
+                    if (type === 'warn') return [b0, b0 + 0.04, 3.80 + (b0 - 3.20)*0.6, 3.65 + (b0 - 3.20)*0.4];
+                    if (type === 'pend') return [b0, b0 + 0.01, null, null];
+                    return [b0, b0 + 0.01, 3.24 + (b0 - 3.20)*0.2, 3.23 + (b0 - 3.20)*0.1];
+                }
+            },
+            Iddq: { 
+                ucl: 22.0, 
+                yTitle: 'Quiescent Current (Iddq - µA)', 
+                specLabel: 'Static Spec Ceiling Limit (22.0 µA)',
+                yMin: 10.0, yMax: 32.0,
+                baseMean: 12.8,
+                unit: 'µA',
+                generate: (b0, type) => {
+                    if (type === 'crit') return [b0, b0 + 0.3, 22.5 + (b0 - 12.8)*1.2, 28.5 + (b0 - 12.8)*1.5];
+                    if (type === 'warn') return [b0, b0 + 0.2, 16.5 + (b0 - 12.8)*0.8, 17.8 + (b0 - 12.8)*0.9];
+                    if (type === 'pend') return [b0, b0 + 0.1, null, null];
+                    return [b0, b0 + 0.1, 13.1 + (b0 - 12.8)*0.3, 13.3 + (b0 - 12.8)*0.3];
+                }
+            },
+            Leakage: { 
+                ucl: 4.0, 
+                yTitle: 'Gate Oxide Leakage (Ileak - nA)', 
+                specLabel: 'Static Spec Ceiling Limit (4.0 nA)',
+                yMin: 1.2, yMax: 5.2,
+                baseMean: 1.80,
+                unit: 'nA',
+                generate: (b0, type) => {
+                    if (type === 'crit') return [b0, b0 + 0.04, 3.65 + (b0 - 1.80)*0.8, 4.45 + (b0 - 1.80)*1.0];
+                    if (type === 'warn') return [b0, b0 + 0.02, 2.30 + (b0 - 1.80)*0.5, 2.50 + (b0 - 1.80)*0.6];
+                    if (type === 'pend') return [b0, b0 + 0.01, null, null];
+                    return [b0, b0 + 0.01, 1.84 + (b0 - 1.80)*0.2, 1.86 + (b0 - 1.80)*0.2];
+                }
+            },
+            Supply: { 
+                ucl: 65.0, 
+                yTitle: 'Supply Current (Idd - mA)', 
+                specLabel: 'Static Spec Ceiling Limit (65.0 mA)',
+                yMin: 35.0, yMax: 95.0,
+                baseMean: 45.0,
+                unit: 'mA',
+                generate: (b0, type) => {
+                    if (type === 'crit') return [b0, b0 + 1.2, 64.0 + (b0 - 45.0)*1.5, 82.0 + (b0 - 45.0)*2.0];
+                    if (type === 'warn') return [b0, b0 + 0.8, 52.0 + (b0 - 45.0)*1.0, 56.5 + (b0 - 45.0)*1.1];
+                    if (type === 'pend') return [b0, b0 + 0.4, null, null];
+                    return [b0, b0 + 0.3, 45.7 + (b0 - 45.0)*0.4, 46.2 + (b0 - 45.0)*0.4];
+                }
+            },
+            Vth: { 
+                ucl: 0.50, 
+                yTitle: 'Threshold Voltage (Vth - V)', 
+                specLabel: 'Lower Static Spec Floor (0.50 V)',
+                yMin: 0.25, yMax: 0.85,
+                baseMean: 0.72,
+                unit: 'V',
+                generate: (b0, type) => {
+                    if (type === 'crit') return [b0, b0 - 0.01, 0.48 + (b0 - 0.72)*0.4, 0.36 + (b0 - 0.72)*0.3];
+                    if (type === 'warn') return [b0, b0 - 0.005, 0.62 + (b0 - 0.72)*0.5, 0.58 + (b0 - 0.72)*0.5];
+                    if (type === 'pend') return [b0, b0 - 0.002, null, null];
+                    return [b0, b0 - 0.002, 0.70 + (b0 - 0.72)*0.3, 0.69 + (b0 - 0.72)*0.3];
+                }
+            }
+        };
 
-with audit_col2:
-    export_df = df[["Device_ID", "Iddq_0h", "Iddq_24h", "Iddq_96h", "Iddq_168h", "Leakage_0h", "Tpd_0h", "Drift_Pct", "Modified_Z", "AI_Status"]].copy()
-    export_df["QA_Disposition"] = export_df["Device_ID"].map(lambda x: st.session_state.saved_decisions.get(x, {}).get("Decision", "AUTO_CLASSIFIED"))
-    export_df["QA_Comment"] = export_df["Device_ID"].map(lambda x: st.session_state.saved_decisions.get(x, {}).get("Comment", "N/A"))
-    
-    csv_buffer = io.StringIO()
-    export_df.to_csv(csv_buffer, index=False)
-    csv_data = csv_buffer.getvalue()
-    
-    st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
-    st.download_button(
-        label="Export Signed-Off Report (CSV)",
-        data=csv_data,
-        file_name="ISRO_MIL_STD_883_SCREENING_REPORT.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
+        let currentActiveParam = 'Tpd';
+
+        function generate50Traces(paramKey) {
+            currentActiveParam = paramKey;
+            const conf = paramConfigs[paramKey];
+            const datasets = [];
+
+            // Red Dotted Limit Line
+            datasets.push({
+                label: conf.specLabel,
+                data: [conf.ucl, conf.ucl, conf.ucl, conf.ucl],
+                borderColor: '#FF2A5F',
+                borderWidth: 2.0,
+                borderDash: [6, 6],
+                pointRadius: 0,
+                pointHoverRadius: 0,
+                fill: false
+            });
+
+            for(let i = 0; i < 50; i++) {
+                const devId = `CMP-${1001 + i}`;
+                let col, width, pts;
+
+                const offset = ((i % 7) - 3) * 0.015 * conf.baseMean;
+                const b0 = conf.baseMean + offset;
+
+                if(critList.includes(i)) {
+                    col = '#FF2A5F';
+                    width = 2.4;
+                    pts = conf.generate(b0, 'crit');
+                } else if(warnList.includes(i)) {
+                    col = '#FFB800';
+                    width = 2.0;
+                    pts = conf.generate(b0, 'warn');
+                } else if(pendList.includes(i)) {
+                    col = '#FFFFFF';
+                    width = 1.2;
+                    pts = conf.generate(b0, 'pend');
+                } else {
+                    col = 'rgba(0, 245, 155, 0.45)';
+                    width = 1.2;
+                    pts = conf.generate(b0, 'nom');
+                }
+
+                datasets.push({
+                    label: devId,
+                    data: pts,
+                    borderColor: col,
+                    borderWidth: width,
+                    tension: 0.45,
+                    pointRadius: 3.5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: col,
+                    fill: false
+                });
+            }
+            return datasets;
+        }
+
+        const ctxControl = document.getElementById('controlChart').getContext('2d');
+        let controlChart = new Chart(ctxControl, {
+            type: 'line',
+            data: {
+                labels: checkpoints,
+                datasets: generate50Traces('Tpd')
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                devicePixelRatio: 2,
+                interaction: {
+                    mode: 'nearest',
+                    intersect: true
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(15, 23, 42, 0.96)',
+                        titleColor: '#38bdf8',
+                        bodyColor: '#f8fafc',
+                        borderColor: 'rgba(56, 189, 248, 0.35)',
+                        borderWidth: 1.5,
+                        padding: 10,
+                        titleFont: { family: 'JetBrains Mono', size: 12, weight: 'bold' },
+                        bodyFont: { family: 'JetBrains Mono', size: 11 },
+                        callbacks: {
+                            title: function(context) {
+                                return `Component: ${context[0].dataset.label}`;
+                            },
+                            label: function(context) {
+                                if (context.datasetIndex === 0) return null;
+                                const val = context.parsed.y;
+                                const unit = paramConfigs[currentActiveParam].unit;
+                                if (val === null) return ' Telemetry: Awaiting Scan';
+                                return ` Telemetry: ${val.toFixed(2)} ${unit}`;
+                            }
+                        },
+                        filter: function(item) {
+                            return item.datasetIndex !== 0;
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { family: 'Inter' } } },
+                    y: { 
+                        min: paramConfigs.Tpd.yMin,
+                        max: paramConfigs.Tpd.yMax,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
+                        ticks: { color: '#94a3b8', font: { family: 'Inter' } },
+                        title: { display: true, text: 'Propagation Delay (Tpd - ns)', color: '#94a3b8', font: { family: 'Inter' } }
+                    }
+                }
+            }
+        });
+
+        function switchParamData(param) {
+            const conf = paramConfigs[param];
+            controlChart.data.datasets = generate50Traces(param);
+            controlChart.options.scales.y.title.text = conf.yTitle;
+            controlChart.options.scales.y.min = conf.yMin;
+            controlChart.options.scales.y.max = conf.yMax;
+            controlChart.update();
+        }
+
+        // 3. Build 50-Socket Matrix + Database with Clean Status Terms
+        const matrixGrid = document.getElementById('matrixGrid');
+        const dutDropdown = document.getElementById('dutDropdown');
+        const deviceDB = {};
+
+        for(let i = 0; i < 50; i++) {
+            const devId = `CMP-${1001 + i}`;
+            let status = "PASSED";
+            let chipClass = "chip-pass";
+            let pillText = "PASSED +2%";
+            let iddq = "13.02 µA", drift = "+2.0%", zscore = "-0.12σ", leak = "1.84 nA", tpd = "3.20 ns";
+
+            if (critList.includes(i)) {
+                status = "REJECTED";
+                chipClass = "chip-fail";
+                pillText = "REJECTED +55%";
+                iddq = "28.40 µA"; drift = "+121.5%"; zscore = "+5.42σ"; leak = "3.85 nA"; tpd = "4.12 ns";
+            } else if (warnList.includes(i)) {
+                status = "RETEST";
+                chipClass = "chip-warn";
+                pillText = "RETEST +25%";
+                iddq = "16.48 µA"; drift = "+25.0%"; zscore = "+54.21σ"; leak = "2.28 nA"; tpd = "3.49 ns";
+            } else if (pendList.includes(i)) {
+                status = "IN-QUEUE";
+                chipClass = "chip-pend";
+                pillText = "IN-QUEUE";
+                iddq = "Pending"; drift = "Pending"; zscore = "N/A"; leak = "Pending"; tpd = "Pending";
+            }
+
+            deviceDB[devId] = { status, iddq, drift, zscore, leak, tpd, chipClass };
+
+            // Matrix Tile with Single-Line Guaranteed Tooltip
+            const div = document.createElement('div');
+            div.className = `socket-chip ${chipClass}`;
+            div.innerHTML = `
+                <div class="socket-id">${devId}</div>
+                <div class="socket-pill">${pillText}</div>
+                <div class="tooltip-card">
+                    <div style="font-weight:700; color:#f8fafc; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px; margin-bottom:4px;">
+                        ${devId} [${status}]
+                    </div>
+                    <div>• Quiescent (I<sub>ddq</sub>): <strong>${iddq}</strong></div>
+                    <div>• Temporal Drift: <strong>${drift}</strong></div>
+                    <div>• Gate Oxide Leakage (I<sub>leak</sub>): <strong>${leak}</strong></div>
+                    <div>• Propagation Delay (T<sub>pd</sub>): <strong>${tpd}</strong></div>
+                </div>
+            `;
+            div.onclick = () => selectDUT(devId);
+            matrixGrid.appendChild(div);
+        }
+
+        // Render Dropdown items with status filter
+        function renderDropdownOptions(filter = 'ALL') {
+            dutDropdown.innerHTML = '';
+            for(let i = 0; i < 50; i++) {
+                const devId = `CMP-${1001 + i}`;
+                const st = deviceDB[devId].status;
+
+                let match = false;
+                if(filter === 'ALL') match = true;
+                else if(filter === st) match = true;
+
+                if(match) {
+                    const opt = document.createElement('option');
+                    opt.value = devId;
+                    opt.innerText = `${devId} — [${st}]`;
+                    dutDropdown.appendChild(opt);
+                }
+            }
+        }
+
+        function filterDropdown(category, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderDropdownOptions(category);
+            if(dutDropdown.options.length > 0) {
+                selectDUT(dutDropdown.options[0].value);
+            }
+        }
+
+        function selectDUT(id) {
+            dutDropdown.value = id;
+            const d = deviceDB[id];
+            
+            const tag = document.getElementById('selectedStatusTag');
+            tag.innerText = d.status;
+
+            document.getElementById('forensicCmpTitle').innerText = id;
+            const fStatusTitle = document.getElementById('forensicStatusTitle');
+            fStatusTitle.innerText = d.status;
+
+            const vBox = document.getElementById('verdictBox');
+            const vTitle = document.getElementById('verdictTitle');
+            const vDesc = document.getElementById('verdictDesc');
+
+            const elIddqBase = document.getElementById('fIddqBase');
+            const elLeakBase = document.getElementById('fLeakBase');
+            const elZScore = document.getElementById('fZScore');
+            const elTpdBase = document.getElementById('fTpdBase');
+
+            let chipColor = '#00F59B';
+
+            if(d.status === "REJECTED") {
+                tag.className = "pill-badge-red";
+                fStatusTitle.style.color = "#FF2A5F";
+                vBox.style.background = "rgba(255, 42, 95, 0.14)";
+                vBox.style.borderColor = "rgba(255, 42, 95, 0.4)";
+                vTitle.style.color = "#FF2A5F";
+                vTitle.innerText = "CORE VERDICT: CRITICAL ANOMALY (Latent Oxide Breakdown: REJECTED)";
+                vDesc.innerText = "Fixed 22.0 µA ceiling falsely passes this part, but dynamic time-drift detects impending thermal runaway.";
+                chipColor = "#FF2A5F";
+            } else if(d.status === "RETEST") {
+                tag.className = "pill-badge-yellow";
+                fStatusTitle.style.color = "#FFB800";
+                vBox.style.background = "rgba(255, 184, 0, 0.14)";
+                vBox.style.borderColor = "rgba(255, 184, 0, 0.4)";
+                vTitle.style.color = "#FFB800";
+                vTitle.innerText = "CORE VERDICT: MARGINAL DRIFT (+24h Thermal Retest Required: RETEST)";
+                vDesc.innerText = "Drift slope exceeds nominal process variance. Extended thermal stress required to verify stability.";
+                chipColor = "#FFB800";
+            } else if(d.status === "PASSED") {
+                tag.className = "pill-badge-green";
+                fStatusTitle.style.color = "#00F59B";
+                vBox.style.background = "rgba(0, 245, 155, 0.14)";
+                vBox.style.borderColor = "rgba(0, 245, 155, 0.4)";
+                vTitle.style.color = "#00F59B";
+                vTitle.innerText = "CORE VERDICT: NOMINAL STABILIZATION (Flight Qualified: PASSED)";
+                vDesc.innerText = "Telemetry parameters remain tightly clustered within historical 1-sigma distribution.";
+                chipColor = "#00F59B";
+            } else {
+                tag.className = "pill-badge-white";
+                fStatusTitle.style.color = "#FFFFFF";
+                vBox.style.background = "rgba(148, 163, 184, 0.12)";
+                vBox.style.borderColor = "rgba(148, 163, 184, 0.35)";
+                vTitle.style.color = "#FFFFFF";
+                vTitle.innerText = "CORE VERDICT: IN-QUEUE (Awaiting Next ATE Diagnostic Scan: IN-QUEUE)";
+                vDesc.innerText = "Component pre-conditioned in chamber; awaiting scan data.";
+                chipColor = "#FFFFFF";
+            }
+
+            elIddqBase.style.color = chipColor;
+            elLeakBase.style.color = chipColor;
+            elZScore.style.color = chipColor;
+            elTpdBase.style.color = chipColor;
+
+            document.getElementById('fIddq').innerText = d.iddq;
+            document.getElementById('fDrift').innerText = d.drift;
+            document.getElementById('fZScore').innerText = `↑ Z-Score: ${d.zscore}`;
+            document.getElementById('fLeak').innerText = d.leak;
+            document.getElementById('fTpd').innerText = d.tpd;
+        }
+
+        // Initialize default view
+        renderDropdownOptions('ALL');
+        selectDUT("CMP-1004");
+
+        // Radio Button Handlers
+        let selectedAction = "Class-S Flight Qualified (PASSED)";
+        function setRadio(elem, action) {
+            document.querySelectorAll('.radio-option').forEach(el => {
+                el.classList.remove('selected');
+                el.querySelector('i').className = "fa-regular fa-circle";
+                el.querySelector('i').style.color = "";
+            });
+            elem.classList.add('selected');
+            elem.querySelector('i').className = "fa-solid fa-circle-dot";
+            elem.querySelector('i').style.color = "#38bdf8";
+            selectedAction = action;
+        }
+
+        // Modal Handlers
+        function openCommitModal() {
+            document.getElementById('modalDut').innerText = dutDropdown.value.split(' — ')[0];
+            document.getElementById('modalAction').innerText = selectedAction;
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+        }
+
+        // CSV Export Engine
+        function downloadTelemetryCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Device_ID,Status,Quiescent_Current_Iddq_uA,Gate_Oxide_Leakage_Ileak_nA,Temporal_Drift_Rate_Pct,Propagation_Delay_Tpd_ns\\n";
+
+            for(let i = 0; i < 50; i++) {
+                const devId = `CMP-${1001 + i}`;
+                const d = deviceDB[devId];
+                csvContent += `${devId},${d.status},${d.iddq.replace(' µA','')},${d.leak.replace(' nA','')},${d.drift},${d.tpd.replace(' ns','')}\\n`;
+            }
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "ISRO_MIL_STD_883_SCREENING_REPORT.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
+"""
+
+components.html(html_code, height=1520, scrolling=True)
