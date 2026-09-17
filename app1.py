@@ -40,7 +40,6 @@ html_code = """
             font-family: 'Inter', -apple-system, sans-serif;
             color: #94a3b8;
             min-height: 100vh;
-            /* Authentic Deep Space Starfield & Cosmos Background */
             background: 
                 radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.20) 0%, transparent 45%),
                 radial-gradient(circle at 80% 80%, rgba(0, 245, 155, 0.14) 0%, transparent 40%),
@@ -51,7 +50,6 @@ html_code = """
             overflow-x: hidden;
         }
 
-        /* Frosted Glass Acrylic Core Tokens */
         .glass-card {
             background: rgba(13, 22, 40, 0.68);
             backdrop-filter: blur(24px);
@@ -62,7 +60,6 @@ html_code = """
             box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.75);
         }
 
-        /* App Main Shell Container */
         .app-shell {
             display: flex;
             width: 100%;
@@ -72,7 +69,6 @@ html_code = """
             align-items: flex-start;
         }
 
-        /* Collapsible Sidebar Drawer */
         .sidebar-panel {
             width: 310px;
             min-width: 310px;
@@ -97,7 +93,6 @@ html_code = """
             transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Sidebar Toggle Buttons */
         .sidebar-close-btn {
             position: absolute;
             top: 20px;
@@ -141,7 +136,6 @@ html_code = """
             color: #fff;
         }
 
-        /* Top Navbar */
         .top-navbar-single {
             padding: 16px 24px;
             margin-bottom: 22px;
@@ -259,7 +253,6 @@ html_code = """
             100% { transform: scale(0.9); opacity: 0.7; }
         }
 
-        /* Checkpoint Milestone Pipeline */
         .milestone-stepper {
             padding: 14px 20px;
             margin-bottom: 22px;
@@ -313,7 +306,6 @@ html_code = """
             font-size: 0.8rem;
         }
 
-        /* Progress Rails */
         .progress-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -344,7 +336,6 @@ html_code = """
             box-shadow: 0 0 14px rgba(56, 189, 248, 0.6);
         }
 
-        /* Hero 4-Metrics + Enlarged Donut Grid Layout */
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr) 2.4fr;
@@ -388,7 +379,6 @@ html_code = """
             color: #00F59B;
         }
 
-        /* Enlarged Pie Chart Card with Single-Line Legend */
         .donut-highlight-card {
             padding: 16px 20px;
             display: flex;
@@ -413,7 +403,6 @@ html_code = """
             align-items: center;
         }
 
-        /* 50-Socket Matrix Grid with Pop-up */
         .matrix-grid {
             display: grid;
             grid-template-columns: repeat(10, 1fr);
@@ -467,7 +456,6 @@ html_code = """
         .chip-pend { border-top: 2px solid #94a3b8; }
         .chip-pend .socket-pill { background: rgba(148, 163, 184, 0.22); color: #FFFFFF; }
 
-        /* Single-Line Guaranteed Tooltip Component */
         .tooltip-card {
             visibility: hidden;
             opacity: 0;
@@ -499,7 +487,6 @@ html_code = """
             transform: translateX(-50%) translateY(0);
         }
 
-        /* Filter Pills & Select Controls */
         .filter-btn-group {
             display: flex;
             gap: 6px;
@@ -588,7 +575,6 @@ html_code = """
             transform: translateY(-1px);
         }
 
-        /* CSV Bottom Export Bar */
         .bottom-export-bar {
             margin-top: 10px;
             padding: 18px 24px;
@@ -620,7 +606,6 @@ html_code = """
             transform: translateY(-1px);
         }
 
-        /* Confirmation Modal */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -669,7 +654,6 @@ html_code = """
             margin: 0 auto 16px;
         }
 
-        /* Sidebar Table */
         .sidebar-table {
             width: 100%;
             border-collapse: collapse;
@@ -693,10 +677,8 @@ html_code = """
 </head>
 <body>
 
-    <!-- Main Flex Shell Container -->
     <div class="app-shell">
         
-        <!-- COLLAPSIBLE SIDEBAR DRAWER -->
         <div class="sidebar-panel" id="sidebarPanel">
             <div class="glass-card panel-container" style="padding: 22px; position: relative;">
                 
@@ -743,10 +725,8 @@ html_code = """
             </div>
         </div>
 
-        <!-- MAIN EXPANDING DASHBOARD CONTENT -->
         <div class="main-dashboard" id="mainDashboard">
             
-            <!-- Top Navbar with Space in "> Lot Summary" -->
             <div class="glass-card top-navbar-single">
                 <div class="header-left-cluster">
                     <button class="reopen-sidebar-btn" id="reopenSidebarBtn" onclick="toggleSidebar()">
@@ -766,7 +746,6 @@ html_code = """
                 </div>
             </div>
 
-            <!-- Dual Progress Bars -->
             <div class="progress-grid">
                 <div class="glass-card progress-box">
                     <div class="progress-header">
@@ -788,7 +767,6 @@ html_code = """
                 </div>
             </div>
 
-            <!-- Checkpoint Milestone Pipeline with Pop-ups -->
             <div class="glass-card milestone-stepper">
                 <div class="milestone-step done">
                     <i class="fa-solid fa-circle-check"></i>
@@ -847,7 +825,7 @@ html_code = """
                 </div>
             </div>
 
-            <!-- Hero 4-Metrics + Enlarged Donut Grid (Single-Line Legend) -->
+            <!-- Top 4 Parameter Cards -->
             <div class="metrics-grid">
                 <div class="glass-card metric-card">
                     <div class="metric-title">Quiescent Current (I<sub>ddq</sub>)</div>
@@ -862,14 +840,26 @@ html_code = """
                 </div>
 
                 <div class="glass-card metric-card">
-                    <div class="metric-title">Gate Oxide Leakage (I<sub>leak</sub>)</div>
+                    <div class="metric-title">Leakage Current (I<sub>leak</sub>)</div>
                     <div class="metric-number">2.05 <span style="font-size: 0.95rem; color: #94a3b8;">nA</span></div>
                     <div class="metric-delta" style="color: #00F59B;">↑ +0.04 nA Normal Drift</div>
                     <div class="tooltip-card">
-                        <strong style="color:#00F59B;">Gate Oxide Leakage (I<sub>leak</sub>)</strong><br>
+                        <strong style="color:#00F59B;">Leakage Current (I<sub>leak</sub>)</strong><br>
                         • Mean Leakage: 2.05 nA<br>
                         • Limit Ceiling: 4.00 nA<br>
                         • Barrier Integrity: PASSED
+                    </div>
+                </div>
+
+                <div class="glass-card metric-card">
+                    <div class="metric-title">Threshold Voltage (V<sub>t</sub> / V<sub>th</sub>)</div>
+                    <div class="metric-number">0.72 <span style="font-size: 0.95rem; color: #94a3b8;">V</span></div>
+                    <div class="metric-delta" style="color: #00F59B;">↑ Within Spec Floor</div>
+                    <div class="tooltip-card">
+                        <strong style="color:#00F59B;">Threshold Voltage (V<sub>t</sub> / V<sub>th</sub>)</strong><br>
+                        • Nominal Mean: 0.72 V<br>
+                        • Floor Limit: 0.50 V<br>
+                        • Gate Integrity: PASSED
                     </div>
                 </div>
 
@@ -885,19 +875,6 @@ html_code = """
                     </div>
                 </div>
 
-                <div class="glass-card metric-card">
-                    <div class="metric-title">Kelvin Contact Resistance</div>
-                    <div class="metric-number">0.042 <span style="font-size: 0.95rem; color: #94a3b8;">Ω</span></div>
-                    <div class="metric-delta" style="color: #00F59B;">↑ 4-Point Nominal</div>
-                    <div class="tooltip-card">
-                        <strong style="color:#00F59B;">Kelvin Resistance</strong><br>
-                        • 4-Point Terminal Check: PASSED<br>
-                        • Contact Variance: ±0.002 Ω<br>
-                        • Socket Connection: OPTIMAL
-                    </div>
-                </div>
-
-                <!-- Enlarged Pie Chart Card with Single-Line Legend -->
                 <div class="glass-card donut-highlight-card">
                     <div style="height: 125px; width: 125px; position: relative; flex-shrink: 0;">
                         <canvas id="yieldDonut"></canvas>
@@ -912,20 +889,20 @@ html_code = """
                 </div>
             </div>
 
-            <!-- Bézier Spline Multi-Trace Control Chart with Single-Line Tooltips -->
             <div class="glass-card panel-container">
                 <div class="section-header">
                     <div>
                         <span>Live Lot Analytics: Parametric Trajectories (Control Chart)</span>
-                        <div style="font-size: 0.78rem; font-weight: 500; color: #64748b; margin-top: 4px;">All 50 Components Screened Against Dynamic Drift & Spec Limits</div>
+                        <div style="font-size: 0.78rem; font-weight: 500; color: #64748b; margin-top: 4px;">All 50 Components Screened Against Dynamic Drift & Spec Limits over Burn-In Checkpoints (0h to 168h)</div>
                     </div>
-                    <div style="width: 320px;">
+                    <div style="width: 340px;">
                         <select id="paramSelect" onchange="switchParamData(this.value)">
-                            <option value="Tpd">Propagation Delay (T<sub>pd</sub> - ns)</option>
-                            <option value="Iddq">Quiescent Current (I<sub>ddq</sub> - µA)</option>
-                            <option value="Leakage">Gate Oxide Leakage (I<sub>leak</sub> - nA)</option>
-                            <option value="Supply">Supply Current (I<sub>dd</sub> - mA)</option>
-                            <option value="Vth">Threshold Voltage (V<sub>th</sub> - V)</option>
+                            <option value="Iddq">1. Quiescent Current (I<sub>ddq</sub> - µA)</option>
+                            <option value="Leakage">2. Leakage Current (I<sub>leak</sub> - nA)</option>
+                            <option value="Vth">3. Threshold Voltage (V<sub>t</sub> / V<sub>th</sub> - V)</option>
+                            <option value="Tpd">4. Propagation Delay (T<sub>pd</sub> - ns)</option>
+                            <option value="Supply">5. Supply Current (I<sub>dd</sub> - mA)</option>
+                            <option value="Frequency">6. Operating Frequency (f - MHz)</option>
                         </select>
                     </div>
                 </div>
@@ -934,7 +911,6 @@ html_code = """
                 </div>
             </div>
 
-            <!-- 50-Socket Batch Anomaly Map with Pop-up Glow -->
             <div class="glass-card panel-container">
                 <div class="section-header">
                     <div>
@@ -944,10 +920,8 @@ html_code = """
                 <div class="matrix-grid" id="matrixGrid"></div>
             </div>
 
-            <!-- Forensic Diagnostics & Formal ISRO QA Disposition Modal -->
             <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 24px; margin-bottom: 24px;">
                 
-                <!-- Left Forensic Card -->
                 <div class="glass-card panel-container">
                     <div class="section-header" style="flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -963,12 +937,10 @@ html_code = """
                                 <button class="filter-btn" onclick="filterDropdown('REJECTED', this)">REJECTED</button>
                                 <button class="filter-btn" onclick="filterDropdown('IN-QUEUE', this)">IN-QUEUE</button>
                             </div>
-                            <!-- Oval Badge: Correct Yellow for RETEST and White for IN-QUEUE -->
                             <span id="selectedStatusTag" class="pill-badge-yellow">RETEST</span>
                         </div>
                     </div>
 
-                    <!-- Component Name & Status Title -->
                     <div style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
                         <span id="forensicCmpTitle">CMP-1004</span>
                         <span style="color: #64748b; font-weight: 400;">|</span>
@@ -976,13 +948,11 @@ html_code = """
                         <span id="forensicStatusTitle" style="color: #FFB800;">RETEST</span>
                     </div>
 
-                    <!-- Dynamic Status-Matched Verdict Card -->
                     <div id="verdictBox" style="border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1);">
                         <div id="verdictTitle" style="font-weight: 700; font-size: 0.88rem; margin-bottom: 4px;"></div>
                         <div id="verdictDesc" style="font-size: 0.8rem; line-height: 1.5;"></div>
                     </div>
 
-                    <!-- 4 Diagnostic Metrics -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                         <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 14px;">
                             <div style="font-size: 0.75rem; color: #94a3b8;">Quiescent Current (I<sub>ddq</sub>)</div>
@@ -990,14 +960,14 @@ html_code = """
                             <div style="font-size: 0.72rem; font-family: 'JetBrains Mono';" id="fIddqBase">↑ Baseline: 12.80 µA</div>
                         </div>
                         <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 14px;">
-                            <div style="font-size: 0.75rem; color: #94a3b8;">Gate Oxide Leakage (I<sub>leak</sub>)</div>
+                            <div style="font-size: 0.75rem; color: #94a3b8;">Leakage Current (I<sub>leak</sub>)</div>
                             <div style="font-size: 1.45rem; font-weight: 800; color: #f8fafc;" id="fLeak">2.28 nA</div>
                             <div style="font-size: 0.72rem; font-family: 'JetBrains Mono';" id="fLeakBase">↑ Nominal Barrier</div>
                         </div>
                         <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 14px;">
-                            <div style="font-size: 0.75rem; color: #94a3b8;">Temporal Drift Rate</div>
-                            <div style="font-size: 1.45rem; font-weight: 800; color: #f8fafc;" id="fDrift">+25.0%</div>
-                            <div style="font-size: 0.72rem; font-family: 'JetBrains Mono';" id="fZScore">↑ Z-Score: +54.21σ</div>
+                            <div style="font-size: 0.75rem; color: #94a3b8;">Threshold Voltage (V<sub>t</sub> / V<sub>th</sub>)</div>
+                            <div style="font-size: 1.45rem; font-weight: 800; color: #f8fafc;" id="fVth">0.72 V</div>
+                            <div style="font-size: 0.72rem; font-family: 'JetBrains Mono';" id="fVthBase">↑ Floor > 0.50 V</div>
                         </div>
                         <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(255,255,255,0.06); padding: 14px; border-radius: 14px;">
                             <div style="font-size: 0.75rem; color: #94a3b8;">Propagation Delay (T<sub>pd</sub>)</div>
@@ -1007,7 +977,6 @@ html_code = """
                     </div>
                 </div>
 
-                <!-- Right QA Decision Box -->
                 <div class="glass-card panel-container">
                     <div class="section-header">
                         <span>Flight Quality Assurance & Lot Disposition Sign-Off</span>
@@ -1040,7 +1009,6 @@ html_code = """
                 </div>
             </div>
 
-            <!-- Bottom CSV Download Panel -->
             <div class="glass-card bottom-export-bar">
                 <div>
                     <strong style="color:#f8fafc; font-size:0.92rem;">Audit Report & Lot Telemetry Export</strong>
@@ -1054,7 +1022,6 @@ html_code = """
         </div>
     </div>
 
-    <!-- FLOATING CONFIRMATION POPUP MODAL -->
     <div class="modal-overlay" id="confirmModal">
         <div class="modal-box">
             <div class="modal-icon">
@@ -1073,9 +1040,7 @@ html_code = """
         </div>
     </div>
 
-    <!-- JAVASCRIPT LOGIC ENGINE -->
     <script>
-        // Collapsible Sidebar Drawer
         function toggleSidebar() {
             const panel = document.getElementById('sidebarPanel');
             const reopenBtn = document.getElementById('reopenSidebarBtn');
@@ -1087,7 +1052,6 @@ html_code = """
             }
         }
 
-        // 1. Cyber OLED Donut Chart
         const ctxDonut = document.getElementById('yieldDonut').getContext('2d');
         new Chart(ctxDonut, {
             type: 'doughnut',
@@ -1109,30 +1073,15 @@ html_code = """
             }
         });
 
-        // 2. High-DPI Crisp Multi-Trace Bézier Spline Chart with Single-Line Tooltip
         const checkpoints = ['0h Baseline', '24h Checkpoint', '96h Active Scan', '168h Qualification'];
         const critList = [7, 22, 30, 44, 48];
         const warnList = [3, 10, 14, 18, 26, 34, 37, 42];
         const pendList = [39, 43, 45, 46, 47, 49];
 
         const paramConfigs = {
-            Tpd: { 
-                ucl: 4.8, 
-                yTitle: 'Propagation Delay (Tpd - ns)', 
-                specLabel: 'Static Spec Ceiling Limit (4.8 ns)',
-                yMin: 2.8, yMax: 5.4,
-                baseMean: 3.20,
-                unit: 'ns',
-                generate: (b0, type) => {
-                    if (type === 'crit') return [b0, b0 + 0.05, 4.75 + (b0 - 3.20)*0.5, 4.40 + (b0 - 3.20)*0.3];
-                    if (type === 'warn') return [b0, b0 + 0.04, 3.80 + (b0 - 3.20)*0.6, 3.65 + (b0 - 3.20)*0.4];
-                    if (type === 'pend') return [b0, b0 + 0.01, null, null];
-                    return [b0, b0 + 0.01, 3.24 + (b0 - 3.20)*0.2, 3.23 + (b0 - 3.20)*0.1];
-                }
-            },
             Iddq: { 
                 ucl: 22.0, 
-                yTitle: 'Quiescent Current (Iddq - µA)', 
+                yTitle: 'Quiescent Current (i<sub>ddq</sub> - µA)', 
                 specLabel: 'Static Spec Ceiling Limit (22.0 µA)',
                 yMin: 10.0, yMax: 32.0,
                 baseMean: 12.8,
@@ -1146,7 +1095,7 @@ html_code = """
             },
             Leakage: { 
                 ucl: 4.0, 
-                yTitle: 'Gate Oxide Leakage (Ileak - nA)', 
+                yTitle: 'Leakage Current (i<sub>leak</sub> - nA)', 
                 specLabel: 'Static Spec Ceiling Limit (4.0 nA)',
                 yMin: 1.2, yMax: 5.2,
                 baseMean: 1.80,
@@ -1158,9 +1107,37 @@ html_code = """
                     return [b0, b0 + 0.01, 1.84 + (b0 - 1.80)*0.2, 1.86 + (b0 - 1.80)*0.2];
                 }
             },
+            Vth: { 
+                ucl: 0.50, 
+                yTitle: 'Threshold Voltage (v<sub>t</sub> / v<sub>th</sub> - V)', 
+                specLabel: 'Lower Static Spec Floor (0.50 V)',
+                yMin: 0.25, yMax: 0.85,
+                baseMean: 0.72,
+                unit: 'V',
+                generate: (b0, type) => {
+                    if (type === 'crit') return [b0, b0 - 0.01, 0.48 + (b0 - 0.72)*0.4, 0.36 + (b0 - 0.72)*0.3];
+                    if (type === 'warn') return [b0, b0 - 0.005, 0.62 + (b0 - 0.72)*0.5, 0.58 + (b0 - 0.72)*0.5];
+                    if (type === 'pend') return [b0, b0 - 0.002, null, null];
+                    return [b0, b0 - 0.002, 0.70 + (b0 - 0.72)*0.3, 0.69 + (b0 - 0.72)*0.3];
+                }
+            },
+            Tpd: { 
+                ucl: 4.8, 
+                yTitle: 'Propagation Delay (t<sub>pd</sub> - ns)', 
+                specLabel: 'Static Spec Ceiling Limit (4.8 ns)',
+                yMin: 2.8, yMax: 5.4,
+                baseMean: 3.20,
+                unit: 'ns',
+                generate: (b0, type) => {
+                    if (type === 'crit') return [b0, b0 + 0.05, 4.75 + (b0 - 3.20)*0.5, 4.40 + (b0 - 3.20)*0.3];
+                    if (type === 'warn') return [b0, b0 + 0.04, 3.80 + (b0 - 3.20)*0.6, 3.65 + (b0 - 3.20)*0.4];
+                    if (type === 'pend') return [b0, b0 + 0.01, null, null];
+                    return [b0, b0 + 0.01, 3.24 + (b0 - 3.20)*0.2, 3.23 + (b0 - 3.20)*0.1];
+                }
+            },
             Supply: { 
                 ucl: 65.0, 
-                yTitle: 'Supply Current (Idd - mA)', 
+                yTitle: 'Supply Current (i<sub>dd</sub> - mA)', 
                 specLabel: 'Static Spec Ceiling Limit (65.0 mA)',
                 yMin: 35.0, yMax: 95.0,
                 baseMean: 45.0,
@@ -1172,30 +1149,29 @@ html_code = """
                     return [b0, b0 + 0.3, 45.7 + (b0 - 45.0)*0.4, 46.2 + (b0 - 45.0)*0.4];
                 }
             },
-            Vth: { 
-                ucl: 0.50, 
-                yTitle: 'Threshold Voltage (Vth - V)', 
-                specLabel: 'Lower Static Spec Floor (0.50 V)',
-                yMin: 0.25, yMax: 0.85,
-                baseMean: 0.72,
-                unit: 'V',
+            Frequency: { 
+                ucl: 50.0, 
+                yTitle: 'Operating Frequency (f - MHz)', 
+                specLabel: 'Lower Spec Floor (50.0 MHz)',
+                yMin: 30.0, yMax: 120.0,
+                baseMean: 95.0,
+                unit: 'MHz',
                 generate: (b0, type) => {
-                    if (type === 'crit') return [b0, b0 - 0.01, 0.48 + (b0 - 0.72)*0.4, 0.36 + (b0 - 0.72)*0.3];
-                    if (type === 'warn') return [b0, b0 - 0.005, 0.62 + (b0 - 0.72)*0.5, 0.58 + (b0 - 0.72)*0.5];
-                    if (type === 'pend') return [b0, b0 - 0.002, null, null];
-                    return [b0, b0 - 0.002, 0.70 + (b0 - 0.72)*0.3, 0.69 + (b0 - 0.72)*0.3];
+                    if (type === 'crit') return [b0, b0 - 2.0, 48.0 - (95.0 - b0)*0.5, 38.0 - (95.0 - b0)*0.8];
+                    if (type === 'warn') return [b0, b0 - 1.0, 72.0 - (95.0 - b0)*0.3, 64.0 - (95.0 - b0)*0.4];
+                    if (type === 'pend') return [b0, b0 - 0.5, null, null];
+                    return [b0, b0 - 0.2, 94.5 - (95.0 - b0)*0.1, 94.2 - (95.0 - b0)*0.1];
                 }
             }
         };
 
-        let currentActiveParam = 'Tpd';
+        let currentActiveParam = 'Iddq';
 
         function generate50Traces(paramKey) {
             currentActiveParam = paramKey;
             const conf = paramConfigs[paramKey];
             const datasets = [];
 
-            // Red Dotted Limit Line
             datasets.push({
                 label: conf.specLabel,
                 data: [conf.ucl, conf.ucl, conf.ucl, conf.ucl],
@@ -1252,7 +1228,7 @@ html_code = """
             type: 'line',
             data: {
                 labels: checkpoints,
-                datasets: generate50Traces('Tpd')
+                datasets: generate50Traces('Iddq')
             },
             options: {
                 responsive: true,
@@ -1283,7 +1259,7 @@ html_code = """
                                 const val = context.parsed.y;
                                 const unit = paramConfigs[currentActiveParam].unit;
                                 if (val === null) return ' Telemetry: Awaiting Scan';
-                                return ` Telemetry: ${val.toFixed(2)} ${unit}`;
+                                return ` Telemetry: ${val.toFixed(2)} ${unit} against ${context.label}`;
                             }
                         },
                         filter: function(item) {
@@ -1294,11 +1270,11 @@ html_code = """
                 scales: {
                     x: { grid: { color: 'rgba(255, 255, 255, 0.05)' }, ticks: { color: '#94a3b8', font: { family: 'Inter' } } },
                     y: { 
-                        min: paramConfigs.Tpd.yMin,
-                        max: paramConfigs.Tpd.yMax,
+                        min: paramConfigs.Iddq.yMin,
+                        max: paramConfigs.Iddq.yMax,
                         grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
                         ticks: { color: '#94a3b8', font: { family: 'Inter' } },
-                        title: { display: true, text: 'Propagation Delay (Tpd - ns)', color: '#94a3b8', font: { family: 'Inter' } }
+                        title: { display: true, text: 'Quiescent Current (i_ddq - µA)', color: '#94a3b8', font: { family: 'Inter' } }
                     }
                 }
             }
@@ -1307,13 +1283,13 @@ html_code = """
         function switchParamData(param) {
             const conf = paramConfigs[param];
             controlChart.data.datasets = generate50Traces(param);
-            controlChart.options.scales.y.title.text = conf.yTitle;
+            let cleanTitle = conf.yTitle.replace(/<\/?sub>/g, '').replace(/<\/?th>/g, '');
+            controlChart.options.scales.y.title.text = cleanTitle;
             controlChart.options.scales.y.min = conf.yMin;
             controlChart.options.scales.y.max = conf.yMax;
             controlChart.update();
         }
 
-        // 3. Build 50-Socket Matrix + Database with Clean Status Terms
         const matrixGrid = document.getElementById('matrixGrid');
         const dutDropdown = document.getElementById('dutDropdown');
         const deviceDB = {};
@@ -1344,7 +1320,6 @@ html_code = """
 
             deviceDB[devId] = { status, iddq, drift, zscore, leak, tpd, chipClass };
 
-            // Matrix Tile with Single-Line Guaranteed Tooltip
             const div = document.createElement('div');
             div.className = `socket-chip ${chipClass}`;
             div.innerHTML = `
@@ -1354,17 +1329,16 @@ html_code = """
                     <div style="font-weight:700; color:#f8fafc; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:4px; margin-bottom:4px;">
                         ${devId} [${status}]
                     </div>
-                    <div>• Quiescent (I<sub>ddq</sub>): <strong>${iddq}</strong></div>
+                    <div>• Quiescent Current (i<sub>ddq</sub>): <strong>${iddq}</strong></div>
                     <div>• Temporal Drift: <strong>${drift}</strong></div>
-                    <div>• Gate Oxide Leakage (I<sub>leak</sub>): <strong>${leak}</strong></div>
-                    <div>• Propagation Delay (T<sub>pd</sub>): <strong>${tpd}</strong></div>
+                    <div>• Leakage Current (i<sub>leak</sub>): <strong>${leak}</strong></div>
+                    <div>• Propagation Delay (t<sub>pd</sub>): <strong>${tpd}</strong></div>
                 </div>
             `;
             div.onclick = () => selectDUT(devId);
             matrixGrid.appendChild(div);
         }
 
-        // Render Dropdown items with status filter
         function renderDropdownOptions(filter = 'ALL') {
             dutDropdown.innerHTML = '';
             for(let i = 0; i < 50; i++) {
@@ -1422,7 +1396,7 @@ html_code = """
                 vBox.style.borderColor = "rgba(255, 42, 95, 0.4)";
                 vTitle.style.color = "#FF2A5F";
                 vTitle.innerText = "CORE VERDICT: CRITICAL ANOMALY (Latent Oxide Breakdown: REJECTED)";
-                vDesc.innerText = "Fixed 22.0 µA ceiling falsely passes this part, but dynamic time-drift detects impending thermal runaway.";
+                vDesc.innerText = "Fixed ceiling limit falsely passes this part, but dynamic time-drift detects impending thermal runaway.";
                 chipColor = "#FF2A5F";
             } else if(d.status === "RETEST") {
                 tag.className = "pill-badge-yellow";
@@ -1465,11 +1439,9 @@ html_code = """
             document.getElementById('fTpd').innerText = d.tpd;
         }
 
-        // Initialize default view
         renderDropdownOptions('ALL');
         selectDUT("CMP-1004");
 
-        // Radio Button Handlers
         let selectedAction = "Class-S Flight Qualified (PASSED)";
         function setRadio(elem, action) {
             document.querySelectorAll('.radio-option').forEach(el => {
@@ -1483,7 +1455,6 @@ html_code = """
             selectedAction = action;
         }
 
-        // Modal Handlers
         function openCommitModal() {
             document.getElementById('modalDut').innerText = dutDropdown.value.split(' — ')[0];
             document.getElementById('modalAction').innerText = selectedAction;
@@ -1494,10 +1465,9 @@ html_code = """
             document.getElementById('confirmModal').classList.remove('active');
         }
 
-        // CSV Export Engine
         function downloadTelemetryCSV() {
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Device_ID,Status,Quiescent_Current_Iddq_uA,Gate_Oxide_Leakage_Ileak_nA,Temporal_Drift_Rate_Pct,Propagation_Delay_Tpd_ns\\n";
+            csvContent += "Device_ID,Status,IDDQ_uA,Leakage_Current_nA,Temporal_Drift_Rate_Pct,Propagation_Delay_ns\\n";
 
             for(let i = 0; i < 50; i++) {
                 const devId = `CMP-${1001 + i}`;
